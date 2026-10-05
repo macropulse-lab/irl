@@ -1,0 +1,13 @@
+# gitleaks configuration: default rules, plus an allowlist of the exact
+# placeholder tokens used in the documentation's curl examples. Anything
+# else that looks like a credential still fails scripts/publish-public.sh.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "documentation placeholder tokens"
+regexTarget = "match"
+regexes = [
+  '''eval-token-change-me''',
+  '''your-secret-token-here''',
+]

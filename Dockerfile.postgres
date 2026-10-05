@@ -1,0 +1,7 @@
+# PostgreSQL 16 with pg_partman for IRL Engine
+# pg_partman is required for migration 013 (partitioned reasoning_traces).
+FROM postgres:16-bookworm
+
+RUN apt-get update && apt-get install -y \
+    postgresql-16-partman \
+    && rm -rf /var/lib/apt/lists/*

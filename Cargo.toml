@@ -1,0 +1,70 @@
+[package]
+name = "irl-engine"
+version = "1.3.0"
+edition = "2021"
+
+[[bin]]
+name = "irl-engine"
+path = "src/main.rs"
+
+[[bin]]
+name = "irl-engine-evidence-export"
+path = "src/bin/evidence_export.rs"
+
+[[bin]]
+name = "irl-verify"
+path = "src/bin/irl_verify.rs"
+
+[lib]
+name = "irl_engine"
+path = "src/lib.rs"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+axum = "0.7"
+tower = { version = "0.4", features = ["util"] }
+tower-http = { version = "0.5", features = ["trace"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+hmac = "0.12"
+hex = "0.4"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+sqlx = { version = "0.8", features = ["postgres", "runtime-tokio", "tls-native-tls", "chrono", "uuid"] }
+ed25519-dalek = { version = "2", features = ["serde", "rand_core"] }
+reqwest = { version = "0.12", features = ["json"] }
+anyhow = "1"
+thiserror = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+dotenvy = "0.15"
+base64 = "0.21"
+async-trait = "0.1"
+prometheus = { version = "0.14", features = ["process"] }
+dashmap = "5"
+aes-gcm = "0.10"
+zeroize = { version = "1.8", features = ["zeroize_derive"] }
+rand = { version = "0.8", features = ["getrandom"] }
+# default-features off: the default "rustls" feature pulls a legacy rustls 0.21 stack.
+aws-sdk-kms = { version = "1", default-features = false, features = ["default-https-client", "rt-tokio"] }
+aws-config = "1"
+vaultrs = "0.8"
+axum-server = { version = "0.7", features = ["tls-rustls"] }
+rustls = "0.23"
+rcgen = "0.13"
+x509-parser = "0.16"
+notify = "6"
+rustls-pki-types = "1"
+rustls-pemfile = "2"
+zip = "0.6"
+utoipa = { version = "4", features = ["axum_extras", "uuid", "chrono"] }
+utoipa-swagger-ui = { version = "7", features = ["axum"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

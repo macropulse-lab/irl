@@ -1,0 +1,4 @@
+# Normalize all text files to LF on commit/checkout. A CRLF-vs-LF mismatch in
+# migrations/*.sql once produced divergent sqlx checksums that crash-looped the
+# engine on deploy (the DB stored one line-ending, the CI build another).
+* text=auto eol=lf

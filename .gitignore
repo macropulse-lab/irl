@@ -1,0 +1,19 @@
+# Rust build artifacts
+/target/
+
+# Environment — never commit secrets
+.env
+
+# Proprietary documents — distribute separately
+*.pdf
+*.docx
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+__pycache__/
+*.pyc

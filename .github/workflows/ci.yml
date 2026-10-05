@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # pg_partman-enabled image: migration 013 does CREATE EXTENSION pg_partman,
+        # which is absent from stock postgres:15-alpine and halts the migration
+        # chain on a fresh DB. This image bundles the extension.
+        image: ghcr.io/dbsystel/postgresql-partman:15
+        env:
+          # User must NOT be named "irl": search_path is "$user",public and
+          # migration 001 creates a schema named irl, so a user "irl" makes
+          # sqlx's unqualified _sqlx_migrations table land in the irl schema
+          # instead of public, splitting migration tracking across reconnects.
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: irl
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/irl
+      MTA_MODE: mock
+      IRL_API_TOKENS: ci-test-token
+      LAYER2_ENABLED: "false"
+      BIND_SIZE_TOLERANCE: "0.0001"
+      TRACE_EXPIRY_MS: "3600000"
+      TIME_SOURCE: System
+      PORT: "4000"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Build
+        run: cargo build --locked
+
+      - name: Run tests
+        run: cargo test --locked -- --test-threads=1
+
+      - name: Check formatting
+        run: cargo fmt -- --check
+
+      - name: Run clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Audit dependencies
+        # Advisory-only: the scan runs and prints every RUSTSEC advisory in the
+        # log, but does not hard-gate the build. Reasons: the dependency tree
+        # carries pre-existing advisories, some transitive and some with NO fix
+        # available (e.g. rsa RUSTSEC-2023-0071, Marvin timing sidechannel), so a
+        # hard gate can never pass by upgrades alone. Track and clear these in a
+        # dedicated dependency-security pass; keep this visible so new advisories
+        # are noticed in review.
+        continue-on-error: true
+        run: |
+          cargo install cargo-audit --quiet 2>/dev/null || true
+          cargo audit
+
+  sdks:
+    name: SDK contract tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Python SDK contract tests
+        # Pin the SDK wire format to the server structs: the server ignores
+        # unknown JSON keys, so a misnamed field otherwise fails silently.
+        run: |
+          pip install --quiet requests pytest
+          pytest -q sdks/python/tests
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Go SDK vet
+        working-directory: sdks/go
+        run: go vet ./irl_client.go
