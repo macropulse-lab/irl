@@ -1,10 +1,10 @@
-# What is MacroPulse IRL?
+# What is IRL?
 
-*v1.0 · March 2026*
+*v2.0 · October 2026*
 
 ## One-Line Answer
 
-IRL is a **signal-agnostic pre-execution compliance gateway** — it puts a cryptographic seal on every autonomous trading decision, regardless of which regime signal your agents run on.
+IRL is a **pre-execution compliance gateway** for AI agents that trade. It checks every order against the agent's mandate before it reaches the exchange, seals the reasoning, reconciles the fill, and anchors the record to Bitcoin. It runs on its own, or bound to a signed regime signal you trust. AI agents connect through the IRL Gateway, an MCP server (`pip install irl-gateway`).
 
 ---
 
@@ -48,12 +48,15 @@ You are filling a structural gap.
 
 ---
 
-## Three Editions
+## Three Layers
 
-### L1 — IRL Sidecar
-*Drop-in compliance, operational in under a day.*
+Each layer adds one guarantee. These are not price tiers: L1 and L2 ship in
+the engine and are free to use; L3 is research.
 
-- Pre-execution policy enforcement (regime-aware, per-agent)
+### L1 — Audit rail
+*Prove what happened. Operational in under a day.*
+
+- Pre-execution mandate enforcement: notional cap, allowed assets and venues, agent status
 - Cryptographic reasoning seal (SHA-256 / RFC 8785)
 - Bitemporal audit ledger (tamper-evident, replay-safe)
 - Multi-Agent Registry (fleet identity and governance)
@@ -78,8 +81,8 @@ source via the `MtaClient` interface.
 
 ---
 
-### L2 — IRL Audit Platform
-*Enterprise compliance with anti-replay and signed market truth.*
+### L2 — Signed market truth
+*Prove what the market was.*
 
 Everything in L1, plus:
 
@@ -104,8 +107,8 @@ interface.
 
 ---
 
-### L3 — IRL Sovereign Gateway
-*For clients where compliance cannot reveal alpha.*
+### L3 — Prove without revealing (research)
+*For firms where compliance cannot reveal alpha.*
 
 Everything in L2, plus:
 
@@ -233,7 +236,7 @@ Risk systems           │    partial*           ✗        │
 Attestation services   │       ✗            partial     │
                        └────────────────────────────────┘
                               ↓
-MacroPulse IRL         │       ✓               ✓        │
+IRL                    │       ✓               ✓        │
                        │  + cryptographic  + replay-safe│
                        │  + regime-aware   + tamper-evident│
 ```
@@ -257,15 +260,16 @@ the order is placed, which is the only moment it can be captured honestly.
 
 ## Licensing
 
-IRL is offered as a subscription service tiered by edition and agent count.
-L1 is priced per registered agent. L2 and L3 are enterprise-licensed with
-volume pricing. Contact for a quote based on fleet size and edition.
+IRL is free to use. The engine is source-available under FSL-1.1-ALv2 (any
+use except reselling it as a competing service; each release becomes Apache 2.0
+after two years). The gateway, SDKs and verifier are MIT. Hosting or embedding
+IRL for others needs a commercial licence: hello@macropulse.live.
 
 ---
 
 ## Summary
 
-| | Manual Logging | Trade Surveillance | MacroPulse IRL |
+| | Manual Logging | Trade Surveillance | IRL |
 |--|--|--|--|
 | Pre-execution proof | ✗ | ✗ | **✓** |
 | Tamper-evident | ✗ | ✗ | **✓** |

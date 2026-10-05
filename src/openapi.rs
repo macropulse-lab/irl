@@ -284,7 +284,7 @@ pub struct TokenIssueRequest {
         description = "Cryptographic pre-execution compliance gateway for AI trading agents. \
                        Seals reasoning traces with SHA-256 proof before orders reach the exchange.",
         license(name = "BSL 1.1", url = "https://mariadb.com/bsl11/"),
-        contact(name = "IRL Engine", url = "https://github.com/GabrielGauss/irl-engine"),
+        contact(name = "IRL Engine", url = "https://github.com/macropulse-lab/irl"),
     ),
     paths(
         authorize,

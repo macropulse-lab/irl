@@ -12,8 +12,22 @@ Follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and [Semantic V
   stored but never checked) are now enforced at `/irl/authorize`: an out-of-scope request is rejected
   with 403 `ASSET_UNAUTHORIZED` / `VENUE_UNAUTHORIZED`. Case-insensitive; null = unrestricted.
   Settable at `POST /irl/agents` and in the Python SDK's `register_agent`.
+- **Public source** at [macropulse-lab/irl](https://github.com/macropulse-lab/irl): a history-free
+  export made by `scripts/publish-public.sh` (private planning, business and operations material
+  excluded; gitleaks-gated with `.gitleaks.toml`). Replaces the retired `IRL-engine-AX`.
+- **One IRL site.** irl.macropulse.live leads with the MCP gateway and merges the strongest parts of
+  the former macropulse.live/irl page (ownership gap, tamper demo, trust model, adoption path,
+  regulation table) with live stats from `/irl/anchors`. macropulse.live/irl now redirects here.
+- **Whitepaper v5.0** and updated public docs: free and source-available, standalone mode, agent
+  mandates, Layer 2 v2, and a new section on the IRL Gateway (MCP).
 
 ### Changed
+- **License: FSL-1.1-ALv2** (`LICENSE.md`). Free for any use except offering IRL to others as a
+  competing product or service; each release becomes Apache 2.0 two years after publication. The
+  gateway, SDKs and verifier stay MIT. Paid per-agent tiers are withdrawn; IRL is free to use.
+- **Dependencies:** all 16 Dependabot alerts resolved (openssl 0.10.81, quinn-proto 0.11.19,
+  rustls-webpki 0.103.15, rand 0.8.8, AWS SDK crates; `aws-sdk-kms` without the legacy rustls 0.21
+  stack; prometheus 0.14 / protobuf 3.7.2).
 - **IRL runs without a regime operator.** `MTA_MODE=none` no longer requires `MTA_URL` /
   `MTA_PUBKEY_HEX`, and Layer 2 defaults off in that mode (nothing to bind to). With `MTA_MODE`
   unset, IRL uses `external` when `MTA_URL` is set and `none` otherwise, so existing deployments
@@ -102,6 +116,6 @@ Follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and [Semantic V
 - **Docker Compose** — standalone stack (IRL Engine + PostgreSQL 16)
 - **Database migrations** — 10 SQL migration files under `migrations/`
 
-[1.2.0]: https://github.com/GabrielGauss/irl-engine/releases/tag/v1.2.0
-[1.1.0]: https://github.com/GabrielGauss/irl-engine/releases/tag/v1.1.0
-[1.0.0]: https://github.com/GabrielGauss/irl-engine/releases/tag/v1.0.0
+[1.2.0]: https://github.com/macropulse-lab/irl/releases/tag/v1.2.0
+[1.1.0]: https://github.com/macropulse-lab/irl/releases/tag/v1.1.0
+[1.0.0]: https://github.com/macropulse-lab/irl/releases/tag/v1.0.0

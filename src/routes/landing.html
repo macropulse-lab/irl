@@ -505,16 +505,17 @@
     <h2>Three steps to an agent you can <em>account for.</em></h2>
     <div class="steps">
       <div class="step"><div class="sn">1</div><h3>Give it a mandate</h3><p>Register the agent once: its model hash, a notional cap, the assets and venues it may touch. Suspend it anytime.</p></div>
-      <div class="step"><div class="sn">2</div><h3>Add the gateway</h3><p>Install <code>irl-gateway</code> and add it to your MCP client. Paper trading at live prices is the default.</p></div>
+      <div class="step"><div class="sn">2</div><h3>Add the gateway</h3><p><code>pip install irl-gateway</code> (it's also in the official MCP Registry) and add it to your MCP client. Paper trading at live prices is the default.</p></div>
       <div class="step"><div class="sn">3</div><h3>Let it trade</h3><p>The agent calls <code>execute_trade</code> with a rationale. Out of mandate means no order; in mandate means a sealed, reconciled trade.</p></div>
     </div>
     <div class="connect-grid">
-<pre><span class="comment"># pip install git+https://github.com/macropulse-lab/irl-gateway</span>
+<pre><span class="comment"># pip install irl-gateway   (or let uvx fetch it, as below)</span>
 <span class="comment"># MCP client config (Claude Code, Claude Desktop, …)</span>
 {
   <span class="key">"mcpServers"</span>: {
     <span class="key">"irl-gateway"</span>: {
-      <span class="key">"command"</span>: <span class="str">"irl-gateway"</span>,
+      <span class="key">"command"</span>: <span class="str">"uvx"</span>,
+      <span class="key">"args"</span>: [<span class="str">"irl-gateway"</span>],
       <span class="key">"env"</span>: {
         <span class="key">"IRL_BASE_URL"</span>: <span class="url">"https://irl.example.com"</span>,
         <span class="key">"IRL_AGENT_ID"</span>: <span class="str">"&lt;registered agent&gt;"</span>,

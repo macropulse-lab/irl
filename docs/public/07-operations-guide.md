@@ -33,7 +33,7 @@ Complete this checklist before going live.
 
 ### Configuration
 
-- [ ] `MTA_MODE=MacroPulse` (not `mock`)
+- [ ] `MTA_MODE` is `external` (with `MTA_URL`) or deliberately `none`, never `mock`
 - [ ] `LAYER2_ENABLED=true`
 - [ ] `SHADOW_MODE=false` (or explicitly `true` if intentionally in shadow phase)
 - [ ] `BIND_SIZE_TOLERANCE` tuned to your execution venue's fill model
@@ -292,7 +292,7 @@ Agents are blocked.
 3. For temporary relief in a documented incident: set `MTA_MODE=mock` to
    allow trading to continue with the mock regime. **Log this decision** as a
    compliance exception with timestamps.
-4. When the MTA operator recovers, revert `MTA_MODE=MacroPulse` and restart.
+4. When the MTA operator recovers, revert to `MTA_MODE=external` and restart.
 
 **Note:** All trades authorized during `MTA_MODE=mock` will have
 `mta_regime_id=0` (mock expansion regime) in their traces. Flag these for

@@ -107,7 +107,7 @@ In `external` mode with `LAYER2_ENABLED=true`, each authorize call must include 
 The standalone compose file bundles PostgreSQL and a mock MTA. No MacroPulse account or external service is required.
 
 ```bash
-git clone https://github.com/GabrielGauss/irl-engine.git
+git clone https://github.com/macropulse-lab/irl.git
 cd irl-engine
 
 docker compose -f docker-compose.standalone.yml up -d

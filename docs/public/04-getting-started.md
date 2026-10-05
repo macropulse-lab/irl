@@ -1,4 +1,4 @@
-# Getting Started — L1 Sidecar
+# Getting Started
 
 > **Try it without installing anything:** visit the public sandbox at the demo URL,
 > open `/swagger-ui/`, and use one of the pre-seeded demo agents
@@ -29,11 +29,12 @@ pre-execution gateway in under a day, without changing your existing trading bot
 ## Prerequisites
 
 - PostgreSQL 14+ (standalone, or shared with any existing DB)
-- An MTA — three options:
-  - **Mock (fastest, no account needed):** set `MTA_MODE=mock` — full engine evaluation with no external dependency
-  - **MacroPulse (turnkey reference operator):** set `MTA_URL` and `MTA_PUBKEY_HEX`
-  - **None (pure audit rail):** set `MTA_MODE=none` — no external signal, all sides permitted, agent caps still enforced, `signal_mode="none"` on every trace
+- Optionally, a regime source (MTA). Not required:
+  - **None (the default with no `MTA_URL`):** no external signal. Mandates (caps, assets, venues) are enforced and every trace records `signal_mode="none"`.
+  - **External signed feed:** set `MTA_URL` and `MTA_PUBKEY_HEX` (for example MacroPulse's regime feed); `MTA_MODE` then defaults to `external`.
+  - **Mock (evaluation only):** `MTA_MODE=mock`, a fixed permissive regime.
   - **Custom MTA:** implement the `MtaClient` trait and map your model output to `risk_level`, `max_notional_scale`, `allowed_sides` (see `src/mta.rs`)
+- Connecting an AI agent rather than code? Use the IRL Gateway (MCP): `pip install irl-gateway`, see https://github.com/macropulse-lab/irl-gateway
 - Docker, or a Rust toolchain if building from source
 
 ---
