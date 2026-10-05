@@ -69,7 +69,7 @@ IRL is free to use, self-host and modify, and its source is open to read. Every 
 
 | Component | What it is |
 |---|---|
-| IRL Engine (this repo) | The server: policy, seal, bind, anchor |
+| [IRL Engine](https://github.com/macropulse-lab/irl) (this repo) | The server: policy, seal, bind, anchor |
 | [irl-gateway](https://github.com/macropulse-lab/irl-gateway) | MCP server that puts any AI agent's trades through IRL |
 | [irl-verify](https://github.com/macropulse-lab/irl-verify) | Offline proof-bundle verifier |
 | [irl-sdk-python](https://github.com/macropulse-lab/irl-sdk-python), [irl-sdk-ts](https://github.com/macropulse-lab/irl-sdk-ts) | Client SDKs |

@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>IRL — Proof of what your AI agent decided</title>
+<title>IRL — Give your AI agent a trading mandate it can't break</title>
 <meta name="description" content="IRL (Immutable Reasoning Log) is a free, source-available compliance layer for AI agents that trade: policy before execution, sealed reasoning, fills reconciled, anchored to Bitcoin, verifiable offline by anyone.">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f5a623' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2.5 4 6v5.5c0 4.6 3.3 8.6 8 10 4.7-1.4 8-5.4 8-10V6l-8-3.5Z'/%3E%3Cpath d='m8.6 12 2.4 2.4 4.6-4.8'/%3E%3C/svg%3E">
-<meta property="og:title" content="IRL — Proof of what your AI agent decided">
+<meta property="og:title" content="IRL — Give your AI agent a trading mandate it can't break">
 <meta property="og:description" content="Free, source-available compliance layer for AI agents that trade. Policy before execution, sealed reasoning, anchored to Bitcoin, verifiable by anyone without trusting us.">
 <meta property="og:image" content="https://macropulse.live/og-irl.png">
 <meta property="og:url" content="https://irl.macropulse.live/">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="IRL — Proof of what your AI agent decided">
+<meta name="twitter:title" content="IRL — Give your AI agent a trading mandate it can't break">
 <meta name="twitter:description" content="Free, source-available compliance layer for AI agents that trade. Policy before execution, sealed reasoning, anchored to Bitcoin, verifiable by anyone without trusting us.">
 <meta name="twitter:image" content="https://macropulse.live/og-irl.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -264,6 +264,81 @@
     .hero-inner > *, .reveal, .stagger > * { opacity: 1 !important; transform: none !important; }
     .tilt { transform: none !important; }
   }
+
+  /* Split hero: copy left, MCP exchange right */
+  .hero-split { flex-direction: row; align-items: flex-end; justify-content: space-between; gap: 3rem; }
+  .hero-copy { max-width: 600px; }
+  @media (max-width: 980px) { .hero-split { flex-direction: column; align-items: flex-start; justify-content: flex-end; } }
+  body.loaded .hero-copy { transition-delay: .15s; }
+  body.loaded .mcp-card { transition-delay: .45s; }
+  .glass { position: relative; border-radius: 18px; background: rgba(14,14,17,0.72); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: inset 0 1px 1px rgba(255,255,255,0.1), 0 30px 70px -30px rgba(0,0,0,0.8); border: 1px solid var(--line2); }
+  .mcp-card { width: min(430px, 100%); padding: 1.2rem 1.3rem 1.3rem; font-size: 0.8rem; flex-shrink: 0; }
+  .mc-head { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.9rem; display: flex; align-items: center; gap: 0.5rem; }
+  .mc-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px rgba(63,184,90,0.7); }
+  .mc-row { margin-bottom: 0.6rem; line-height: 1.5; }
+  .mc-user { color: var(--text); font-style: italic; }
+  .mc-tool { font-family: var(--mono); color: var(--amber-b); }
+  .mc-k { color: var(--dim); margin-right: 0.4rem; }
+  .mc-code { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 0.6rem 0.7rem; margin-bottom: 0.7rem; white-space: pre-wrap; }
+  .mc-steps { display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 0.8rem; font-family: var(--mono); font-size: 0.68rem; margin-bottom: 0.8rem; }
+  .mc-steps .ok { color: var(--grn); }
+  .mc-verdict { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; padding-top: 0.7rem; border-top: 1px solid var(--line); margin-bottom: 0.7rem; }
+  .mc-hash { font-size: 0.66rem; color: var(--dim); }
+  .mc-deny { font-size: 0.74rem; color: var(--muted); margin: 0; }
+  .pill { display: inline-block; font-family: var(--mono); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; padding: 0.18rem 0.5rem; border-radius: 5px; margin-right: 0.35rem; }
+  .pill-green { color: var(--green); background: var(--green-dim); border: 1px solid rgba(63,184,90,0.35); }
+  .pill-rose { color: var(--rose); background: rgba(249,112,102,0.08); border: 1px solid rgba(249,112,102,0.35); }
+
+  /* Tables */
+  .table-wrap { margin-top: 2.2rem; overflow-x: auto; }
+  table.gap, table.tools { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  table.gap th { text-align: left; font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--amber-b); font-weight: 600; padding: 0 1rem 0.8rem 0; border-bottom: 1px solid var(--line2); }
+  table.gap td { padding: 0.95rem 1rem 0.95rem 0; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--muted); line-height: 1.55; }
+  table.gap td:first-child { color: var(--text); font-weight: 600; width: 30%; }
+  table.gap td:nth-child(2) { color: var(--dim); }
+  table.gap td:last-child { color: var(--text); }
+  table.gap code, table.tools code, .step code, .prob code, .col-card code { font-family: var(--mono); font-size: 0.76rem; color: var(--amber-b); }
+  table.tools td { padding: 0.6rem 0.8rem 0.6rem 0; border-bottom: 1px solid var(--line); color: var(--muted); vertical-align: top; }
+  table.tools td:first-child { white-space: nowrap; }
+  .connect-grid .table-wrap { margin-top: 0; }
+  .ticks.small { margin-top: 1.2rem; gap: 0.6rem; }
+  .ticks.small li { font-size: 0.84rem; }
+  .dim { color: var(--dim); font-weight: 400; }
+  .rose { color: var(--rose); }
+  .note { font-size: 0.84rem; color: var(--dim); margin-top: 1.4rem; max-width: 720px; line-height: 1.6; }
+
+  /* Tamper demo */
+  .tamper { margin-top: 2rem; display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap; border: 1px solid rgba(249,112,102,0.25); background: rgba(249,112,102,0.04); border-radius: 14px; padding: 1.2rem 1.4rem; }
+  .tp-col { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.78rem; }
+  .tp-tag { font-family: var(--mono); font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+  .tp-arrow { color: var(--rose); font-size: 1.1rem; }
+  .tp-verdict { margin-left: auto; }
+
+  /* Steps */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.1rem; margin: 2.4rem 0 2rem; }
+  @media (max-width: 800px) { .steps { grid-template-columns: 1fr; } }
+  .step { border: 1px solid var(--line); border-radius: 14px; padding: 1.5rem; background: var(--glass); }
+  .step .sn { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--amber-brd); background: var(--amber-dim); color: var(--amber-b); font-family: var(--mono); font-weight: 700; display: flex; align-items: center; justify-content: center; margin-bottom: 0.9rem; }
+  .step h3 { font-size: 1.02rem; font-weight: 800; margin-bottom: 0.4rem; }
+  .step p { font-size: 0.86rem; color: var(--muted); line-height: 1.6; }
+  details.sdk { margin-top: 1.6rem; border: 1px solid var(--line); border-radius: 12px; padding: 0.9rem 1.2rem; background: var(--glass); }
+  details.sdk summary { cursor: pointer; font-size: 0.88rem; color: var(--muted); }
+  details.sdk summary:hover { color: var(--text); }
+  details.sdk pre { margin-top: 1rem; background: var(--bg); border: 1px solid var(--line2); border-radius: 10px; padding: 1rem 1.15rem; font-family: var(--mono); font-size: 0.74rem; overflow-x: auto; line-height: 1.7; }
+
+  /* Trust model */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem; margin-top: 2.4rem; }
+  @media (max-width: 860px) { .two-col { grid-template-columns: 1fr; } }
+  .col-card { border-radius: 16px; padding: 1.7rem; background: var(--glass); border: 1px solid var(--line); }
+  .col-card.good { border-color: rgba(63,184,90,0.28); background: var(--green-dim); }
+  .col-card.limit { border-color: rgba(249,112,102,0.25); }
+  .col-card h3 { font-size: 1.05rem; font-weight: 800; margin-bottom: 1rem; }
+  .col-card h4 { font-size: 0.86rem; font-weight: 700; margin: 1.2rem 0 0.6rem; color: var(--text); }
+  .col-card p { font-size: 0.88rem; color: var(--muted); line-height: 1.6; }
+  .dashes { list-style: none; display: flex; flex-direction: column; gap: 0.55rem; }
+  .dashes li { font-size: 0.86rem; color: var(--muted); line-height: 1.55; padding-left: 1rem; position: relative; }
+  .dashes li::before { content: '–'; position: absolute; left: 0; color: var(--rose); }
+  .dashes b, .col-card b { color: var(--text); }
 </style>
 </head>
 <body>
@@ -279,13 +354,13 @@
     IRL <span class="sub">· Immutable Reasoning Log</span>
   </a>
   <div class="nav-links">
+    <a href="#connect" class="hide-sm">MCP gateway</a>
     <a href="#how" class="hide-sm">How it works</a>
-    <a href="#connect" class="hide-sm">Connect an agent</a>
+    <a href="#trust" class="hide-sm">Trust model</a>
     <a href="#live" class="hide-sm">Live</a>
-    <a href="#verify" class="hide-sm">Verify</a>
     <a href="#free" class="hide-sm">Free &amp; open</a>
     <a href="https://github.com/macropulse-lab/irl-public-docs" class="hide-sm">Docs</a>
-    <a href="https://github.com/macropulse-lab" class="nav-cta">[ GitHub ]</a>
+    <a href="https://github.com/macropulse-lab/irl" class="nav-cta">[ GitHub ]</a>
   </div>
 </nav>
 
@@ -304,111 +379,44 @@
     <div class="hero-fade"></div>
   </div>
 
-  <div class="hero-inner">
-    <a href="https://macropulse.live/proof" class="glass-card tilt" data-tilt>
-      <div class="gc-tag">[ VERIFY ]</div>
-      <div class="gc-h">Check it <em>yourself.</em></div>
-      <div class="gc-d">Open-source verifier. Offline. Against Bitcoin — no account, no trust in us.</div>
-      <div class="gc-arrow">→</div>
-    </a>
-
-    <div class="eyebrow-2">Free compliance layer for AI agents</div>
-    <h1 class="mega">Prove what your<br>agent decided<span class="dot">.</span></h1>
-    <p class="mega-sub">IRL checks every order your agent wants to place against its mandate, seals the reasoning before anything reaches the exchange, reconciles it with the fill, and anchors it all to Bitcoin. Free to use, source open to read.</p>
-    <div class="hero-actions">
-      <a href="#connect" class="btn btn-primary" data-magnetic>Connect your agent →</a>
-      <a href="#sandbox" class="btn btn-ghost">Try the sandbox</a>
+  <div class="hero-inner hero-split">
+    <div class="hero-copy">
+      <div class="eyebrow-2">MCP gateway for AI agents that trade</div>
+      <h1 class="mega">Give your agent<br>a mandate<span class="dot">.</span></h1>
+      <p class="mega-sub">Plug IRL into Claude, ChatGPT or your own agent. Every order is checked against the agent's mandate before it reaches the exchange, its reasoning is sealed, the fill is reconciled, and the record is anchored to Bitcoin. Free to use.</p>
+      <div class="hero-actions">
+        <a href="#connect" class="btn btn-primary" data-magnetic>Connect your agent →</a>
+        <a href="#sandbox" class="btn btn-ghost">Try the sandbox</a>
+      </div>
+      <div class="trust-strip">
+        <span><span class="d">◆</span> Works with any MCP client</span>
+        <span><span class="d">◆</span> Bitcoin anchored</span>
+        <span><span class="d">◆</span> Verify offline</span>
+      </div>
     </div>
-    <div class="trust-strip">
-      <span><span class="d">◆</span> SHA-256 sealed</span>
-      <span><span class="d">◆</span> Bitcoin anchored</span>
-      <span><span class="d">◆</span> Verify offline</span>
-      <span><span class="d">◆</span> Source available</span>
+
+    <div class="mcp-card glass" aria-label="Example: an agent trading through the IRL MCP gateway">
+      <div class="mc-head"><span class="mc-dot"></span>agent ⇄ irl-gateway (MCP)</div>
+      <div class="mc-row mc-user">“Check my mandate, then buy $50 of BTC and explain why.”</div>
+      <div class="mc-row mc-tool"><span class="mc-k">tool</span> execute_trade</div>
+      <pre class="mc-code">{
+  "symbol": "BTC/USDT",
+  "side": "buy",
+  "notional": 50,
+  "rationale": "Above its 200-day average,
+     volatility near target."
+}</pre>
+      <div class="mc-steps">
+        <div class="ok">✓ mandate checked</div>
+        <div class="ok">✓ rationale sealed</div>
+        <div class="ok">✓ order placed</div>
+        <div class="ok">✓ fill reconciled</div>
+      </div>
+      <div class="mc-verdict"><span class="pill pill-green">MATCHED</span><span class="mono mc-hash">trace 038acf72… · anchored daily</span></div>
+      <div class="mc-row mc-deny"><span class="pill pill-rose">DENIED</span> DOGE/USDT is outside this agent's mandate. No order sent.</div>
     </div>
   </div>
 </header>
-
-<!-- Problem -->
-<section id="problem">
-  <div class="wrap reveal">
-    <div class="s-label">The problem</div>
-    <h2>An AI agent just made a trade you <em>can't explain.</em></h2>
-    <p class="lead">Autonomous agents decide in milliseconds, faster than any human reviews. When one loses big — or does something that looks like abuse — the only record is a log file you control. That's not a defense.</p>
-    <div class="prob-grid stagger">
-      <div class="prob tilt" data-tilt><div class="n">01 · UNEXPLAINABLE</div><h3>No reasoning trail</h3><p>The model acted on state that's already gone. Reconstructing "why" after the fact is guesswork a regulator won't accept.</p></div>
-      <div class="prob tilt" data-tilt><div class="n">02 · EDITABLE</div><h3>Logs can be rewritten</h3><p>Records that live on your own servers can be changed — so they prove nothing to an auditor, an LP, or a court.</p></div>
-      <div class="prob tilt" data-tilt><div class="n">03 · LIABILITY</div><h3>"Trust us" is the exposure</h3><p>With no independent proof, every automated decision is a liability waiting for a subpoena you can't answer.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- How -->
-<section id="how">
-  <div class="wrap reveal">
-    <div class="s-label">How it works</div>
-    <h2>Seal. Bind. Anchor.</h2>
-    <p class="lead">IRL runs as a gateway between your agent and the exchange. Three steps turn an automated decision into permanent, checkable evidence.</p>
-    <div class="flow" id="flow">
-      <div class="fnode">
-        <div class="fn-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
-        <div class="fn-step">01 — SEAL</div>
-        <h3>Before the order</h3>
-        <p>Your agent submits its intent: model, asset, venue, size. IRL checks it against the agent's mandate (caps, allowed assets and venues, status), then seals the snapshot with <code>SHA-256</code>. Nothing trades until it passes.</p>
-        <div class="arrow">→</div>
-      </div>
-      <div class="fnode">
-        <div class="fn-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 12a3 3 0 0 1 3-3h1a3 3 0 0 1 0 6h-1"/><path d="M15 12a3 3 0 0 1-3 3h-1a3 3 0 0 1 0-6h1"/></svg></div>
-        <div class="fn-step">02 — BIND</div>
-        <h3>After the fill</h3>
-        <p>The exchange returns a transaction ID. IRL computes <code>final_proof</code> from the sealed reasoning and the fill, and records whether execution <code>MATCHED</code> the intent or <code>DIVERGED</code> from it.</p>
-        <div class="arrow">→</div>
-      </div>
-      <div class="fnode">
-        <div class="fn-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="4"/></svg></div>
-        <div class="fn-step">03 — ANCHOR</div>
-        <h3>Every day</h3>
-        <p>All seals roll into a daily Merkle root, anchored to Bitcoin via OpenTimestamps. The record becomes tamper-evident against everyone — including us.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Connect -->
-<section id="connect">
-  <div class="wrap reveal">
-    <div class="s-label">Connect an agent</div>
-    <h2>Give any AI agent a <em>mandate.</em></h2>
-    <p class="lead">IRL Gateway is an MCP server. Add it to Claude, ChatGPT or your own agent and every trade goes through IRL. The agent gets a trading account it can't misuse, and you get a record of every decision it can't rewrite.</p>
-    <div class="connect-grid">
-<pre><span class="comment"># MCP client config (Claude Code, Claude Desktop, …)</span>
-{
-  <span class="key">"mcpServers"</span>: {
-    <span class="key">"irl-gateway"</span>: {
-      <span class="key">"command"</span>: <span class="str">"irl-gateway"</span>,
-      <span class="key">"env"</span>: {
-        <span class="key">"IRL_BASE_URL"</span>: <span class="url">"https://irl.example.com"</span>,
-        <span class="key">"IRL_AGENT_ID"</span>: <span class="str">"&lt;registered agent&gt;"</span>,
-        <span class="key">"PAPER_BALANCES"</span>: <span class="str">"USDT=1000"</span>
-      }
-    }
-  }
-}
-<span class="comment"># then: "check get_policy, then buy $50 of BTC and explain why"</span></pre>
-      <ul class="ticks">
-        <li><span><b>Policy before execution.</b> Out-of-mandate asset, venue or size: IRL says no and no order is sent.</span></li>
-        <li><span><b>The rationale is sealed.</b> The agent must say why it trades. Its hash goes into the trace; the text stays with you.</span></li>
-        <li><span><b>Fills are reconciled.</b> Every fill is bound back to its intent as <code>MATCHED</code> or <code>DIVERGENT</code>.</span></li>
-        <li><span><b>Fail closed, kill switch included.</b> IRL unreachable means no trade. One file stops everything.</span></li>
-        <li><span><b>Paper first.</b> Simulated fills at live prices by default; any ccxt exchange when you're ready.</span></li>
-      </ul>
-    </div>
-    <div class="verify-actions">
-      <a href="https://github.com/macropulse-lab/irl-gateway" class="chip">↗ irl-gateway (MIT)</a>
-      <a href="https://github.com/macropulse-lab/irl-sdk-python" class="chip">↗ Python SDK</a>
-      <a href="https://github.com/macropulse-lab/irl-sdk-ts" class="chip">↗ TypeScript SDK</a>
-    </div>
-  </div>
-</section>
 
 <!-- Live -->
 <section id="live">
@@ -425,20 +433,218 @@
   </div>
 </section>
 
+<!-- Problem -->
+<section id="problem">
+  <div class="wrap reveal">
+    <div class="s-label">The ownership gap</div>
+    <h2>Your agent just made a trade you <em>can't explain.</em></h2>
+    <p class="lead">Brokers now let AI agents trade on your behalf, and say plainly that they don't supervise or audit them. Logs show what an agent did. They can't prove why, what it knew, or that nobody edited them afterwards.</p>
+    <div class="table-wrap">
+      <table class="gap">
+        <thead><tr><th>Question</th><th>Logs today</th><th>With IRL</th></tr></thead>
+        <tbody>
+          <tr><td>Was the agent allowed to do this?</td><td>Checked by hope</td><td>Mandate enforced <b>before</b> the order: caps, assets, venues, status</td></tr>
+          <tr><td>Why did it trade?</td><td>Inferred after the fact</td><td>Rationale hash sealed before execution</td></tr>
+          <tr><td>Which model decided?</td><td>Not verifiable</td><td>Model hash registered before the trade</td></tr>
+          <tr><td>When, exactly?</td><td>One editable timestamp</td><td>Bitemporal: decision time and record time</td></tr>
+          <tr><td>Did execution match the intent?</td><td>Not tracked</td><td>Every fill reconciled: <code>MATCHED</code> or <code>DIVERGENT</code></td></tr>
+          <tr><td>Could anyone have edited the record?</td><td>Yes, whoever runs the server</td><td>No: daily roots on Bitcoin, verifiable offline</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- How -->
+<section id="how">
+  <div class="wrap reveal">
+    <div class="s-label">How it works</div>
+    <h2>Check. Seal. Bind. Anchor.</h2>
+    <p class="lead">IRL sits between the decision and the exchange. It is not in the execution path: the agent still places its own order, but only with the id IRL sealed.</p>
+    <div class="flow" id="flow">
+      <div class="fnode">
+        <div class="fn-step">01 — CHECK &amp; SEAL</div>
+        <h3>Before the order</h3>
+        <p>The agent submits its intent. IRL checks it against the mandate, then seals the snapshot: <code>reasoning_hash = SHA-256(canonical JSON)</code>. Nothing trades until it passes.</p>
+        <div class="arrow">→</div>
+      </div>
+      <div class="fnode">
+        <div class="fn-step">02 — BIND</div>
+        <h3>After the fill</h3>
+        <p>The exchange returns its transaction id. IRL computes <code>final_proof</code> from the seal and the fill and records whether execution <code>MATCHED</code> the intent.</p>
+        <div class="arrow">→</div>
+      </div>
+      <div class="fnode">
+        <div class="fn-step">03 — ANCHOR</div>
+        <h3>Every day</h3>
+        <p>All seals roll into a Merkle root, timestamped on Bitcoin with OpenTimestamps. From then on the record is tamper-evident against everyone, including us.</p>
+      </div>
+    </div>
+    <div class="tamper">
+      <div class="tp-col">
+        <div class="tp-tag">trace #1042 · sealed</div>
+        <div class="mono">quantity <s>0.5</s> <b class="rose">5.0</b> <span class="dim">← edited later</span></div>
+        <div class="mono">hash <s>a3f2d9…</s> <b class="rose">e08b17…</b></div>
+      </div>
+      <div class="tp-arrow">→</div>
+      <div class="tp-col">
+        <div class="tp-tag">daily Merkle root</div>
+        <div class="mono">recomputed <b class="rose">≠</b> anchored 7d04c2…</div>
+        <div class="mono dim">already in a Bitcoin block</div>
+      </div>
+      <div class="tp-verdict"><span class="pill pill-rose">TAMPER EVIDENT</span></div>
+    </div>
+    <p class="note">Edit one byte of a sealed trace and every hash above it stops matching, while the original root is already on Bitcoin. That is the whole trust model in one loop.</p>
+  </div>
+</section>
+
+<!-- Connect -->
+<section id="connect">
+  <div class="wrap reveal">
+    <div class="s-label">Connect an agent</div>
+    <h2>Three steps to an agent you can <em>account for.</em></h2>
+    <div class="steps">
+      <div class="step"><div class="sn">1</div><h3>Give it a mandate</h3><p>Register the agent once: its model hash, a notional cap, the assets and venues it may touch. Suspend it anytime.</p></div>
+      <div class="step"><div class="sn">2</div><h3>Add the gateway</h3><p>Install <code>irl-gateway</code> and add it to your MCP client. Paper trading at live prices is the default.</p></div>
+      <div class="step"><div class="sn">3</div><h3>Let it trade</h3><p>The agent calls <code>execute_trade</code> with a rationale. Out of mandate means no order; in mandate means a sealed, reconciled trade.</p></div>
+    </div>
+    <div class="connect-grid">
+<pre><span class="comment"># pip install git+https://github.com/macropulse-lab/irl-gateway</span>
+<span class="comment"># MCP client config (Claude Code, Claude Desktop, …)</span>
+{
+  <span class="key">"mcpServers"</span>: {
+    <span class="key">"irl-gateway"</span>: {
+      <span class="key">"command"</span>: <span class="str">"irl-gateway"</span>,
+      <span class="key">"env"</span>: {
+        <span class="key">"IRL_BASE_URL"</span>: <span class="url">"https://irl.example.com"</span>,
+        <span class="key">"IRL_AGENT_ID"</span>: <span class="str">"&lt;registered agent&gt;"</span>,
+        <span class="key">"PAPER_BALANCES"</span>: <span class="str">"USDT=1000"</span>
+      }
+    }
+  }
+}</pre>
+      <div class="table-wrap">
+        <table class="tools">
+          <tbody>
+            <tr><td><code>execute_trade</code></td><td>The only tool that moves money. Authorize → place → bind.</td></tr>
+            <tr><td><code>get_policy</code></td><td>The mandate as IRL enforces it, plus the kill switch.</td></tr>
+            <tr><td><code>get_quote</code> · <code>get_balances</code></td><td>Price and account, paper or exchange.</td></tr>
+            <tr><td><code>get_trace</code></td><td>IRL's sealed record of any trade.</td></tr>
+            <tr><td><code>list_recent_trades</code></td><td>Each rationale next to its sealed hash.</td></tr>
+          </tbody>
+        </table>
+        <ul class="ticks small">
+          <li><span><b>Fail closed.</b> IRL unreachable or saying no means no order.</span></li>
+          <li><span><b>Kill switch.</b> One file stops every trade before IRL is even asked.</span></li>
+          <li><span><b>No silent fills.</b> A fill whose bind fails is reported, never hidden.</span></li>
+        </ul>
+      </div>
+    </div>
+    <details class="sdk">
+      <summary>Not using MCP? Call IRL from code with the SDK →</summary>
+<pre><span class="comment"># pip install irl-sdk   (TypeScript: npm install irl-sdk)</span>
+<span class="key">from</span> irl_sdk <span class="key">import</span> IRLClient, AuthorizeRequest, TradeAction, OrderType
+
+<span class="key">async with</span> IRLClient(IRL_URL, API_TOKEN, MTA_URL) <span class="key">as</span> client:
+    result = <span class="key">await</span> client.authorize(AuthorizeRequest(
+        agent_id=AGENT_ID, model_id=<span class="str">"my-model-v1"</span>, model_hash_hex=MODEL_HASH,
+        action=TradeAction.LONG, asset=<span class="str">"BTC-USD"</span>, order_type=OrderType.MARKET,
+        venue_id=<span class="str">"coinbase"</span>, quantity=<span class="val">0.1</span>, notional=<span class="val">6500.0</span>, notional_currency=<span class="str">"USD"</span>,
+    ))
+    <span class="key">if</span> result.authorized:
+        place_order(client_order_id=..., ...)  <span class="comment"># then bind the fill</span></pre>
+    </details>
+    <div class="verify-actions">
+      <a href="https://github.com/macropulse-lab/irl-gateway" class="chip">↗ irl-gateway (MIT)</a>
+      <a href="https://github.com/macropulse-lab/irl-sdk-python" class="chip">↗ Python SDK</a>
+      <a href="https://github.com/macropulse-lab/irl-sdk-ts" class="chip">↗ TypeScript SDK</a>
+    </div>
+  </div>
+</section>
+
+<!-- Trust model -->
+<section id="trust">
+  <div class="wrap reveal">
+    <div class="s-label">Trust model</div>
+    <h2>What a closed chain proves, <em>and what it doesn't.</em></h2>
+    <p class="lead">IRL is a commitment scheme with independent timestamping. It doesn't make dishonesty impossible; it makes it expensive, contemporaneous and permanent. Here is the exact guarantee, stated the way an auditor will ask for it.</p>
+    <div class="two-col">
+      <div class="col-card good">
+        <h3>A MATCHED chain proves</h3>
+        <ul class="ticks">
+          <li><span><b>Existence:</b> this exact snapshot existed when it was sealed.</span></li>
+          <li><span><b>Integrity:</b> no field changed after the seal.</span></li>
+          <li><span><b>Order:</b> the seal came before execution; retro-dating is rejected.</span></li>
+          <li><span><b>Binding:</b> this reasoning is tied to that exchange transaction.</span></li>
+          <li><span><b>Identity:</b> the model hash was registered before the trade.</span></li>
+          <li><span><b>Independence:</b> verifiable against Bitcoin with zero trust in us.</span></li>
+        </ul>
+      </div>
+      <div class="col-card limit">
+        <h3>It does not prove</h3>
+        <p><b>That the agent told the truth.</b> The agent reports its own reasoning; a dishonest operator could seal a fabricated one.</p>
+        <h4>Why lying still doesn't pay</h4>
+        <ul class="dashes">
+          <li>The story must be committed <b>before</b> the outcome is known.</li>
+          <li>It must reference a model registered beforehand.</li>
+          <li>Any gap between sealed intent and the fill is recorded as <code>DIVERGENT</code>, permanently.</li>
+          <li>On the roadmap: capturing the snapshot inside hardware-attested enclaves (TEE).</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- Verify -->
 <section id="verify">
   <div class="wrap reveal">
     <div class="verify">
       <div class="s-label">Trust without trust</div>
       <h2>You don't have to <em>trust us.</em></h2>
-      <p class="lead">Every audit vendor claims a tamper-proof log. Only IRL hands the proof to the other side — the auditor, the regulator, the LP — and lets them check it with zero access to our servers.</p>
+      <p class="lead">Export a proof bundle and hand it to an auditor, a regulator or an investor. They verify it offline, against Bitcoin, with no account and no access to our servers.</p>
       <div class="big"><span class="a">Open-source verifier.</span> Frozen spec. Reimplement it in any language.</div>
-      <div class="big">Check any proof bundle <span class="a">offline, against Bitcoin.</span></div>
-      <p class="lead" style="margin-top:1.1rem;">We can't fake it. We can't rewrite it. Neither can you. That's the entire design.</p>
       <div class="verify-actions">
         <a href="https://github.com/macropulse-lab/irl-verify" class="chip">↗ irl-verify (offline)</a>
-        <a href="https://macropulse.live/proof" class="chip">↗ In-browser proof explorer</a>
+        <a href="/irl/anchors" class="chip">↗ Public anchor feed</a>
         <a href="https://github.com/macropulse-lab/irl-public-docs" class="chip">↗ Frozen spec</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Adopt -->
+<section id="adopt">
+  <div class="wrap reveal">
+    <div class="s-label">Zero-risk first step</div>
+    <h2>Nobody puts an untested gate in front of live orders. <em>You don't have to.</em></h2>
+    <div class="prob-grid">
+      <div class="prob"><div class="n">01 · SHADOW MODE</div><h3>Audit everything, block nothing</h3><p>With <code>SHADOW_MODE=true</code> every request is checked and sealed but never denied. Compare IRL's verdicts with your live behaviour, then turn enforcement on.</p></div>
+      <div class="prob"><div class="n">02 · SELF-HOST</div><h3>Your alpha never leaves</h3><p>One container plus PostgreSQL in your own infrastructure. Snapshots can be encrypted at rest per trace. The Bitcoin anchor publishes only a 32-byte root.</p></div>
+      <div class="prob"><div class="n">03 · PAPER FIRST</div><h3>Start on simulated fills</h3><p>The gateway paper-trades at live prices by default, with a persistent account, so an agent can earn trust before it touches real money.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- Sandbox -->
+<section id="sandbox">
+  <div class="wrap reveal">
+    <div class="sandbox">
+      <div class="s-label" style="margin-bottom:0.6rem;">For developers</div>
+      <h2>Try it now. <em>No signup.</em></h2>
+      <p class="lead">Three demo agents are pre-seeded. Run a full authorize → bind flow in the interactive API, then verify the proof bundle yourself.</p>
+      <pre><span class="comment"># POST /irl/authorize — check and seal before the order</span>
+{
+  <span class="key">"agent_id"</span>: <span class="str">"00000000-0000-4000-a000-000000000001"</span>,
+  <span class="key">"model_hash_hex"</span>: <span class="str">"sha256-hex-of-model"</span>,
+  <span class="key">"action"</span>: { <span class="key">"Long"</span>: <span class="val">1.5</span> },
+  <span class="key">"asset"</span>: <span class="str">"BTC/USD"</span>,
+  <span class="key">"notional"</span>: <span class="val">64875.00</span>
+}
+<span class="comment"># → { "trace_id": "…", "reasoning_hash": "sha256…", "authorized": true }</span></pre>
+      <div class="sandbox-links">
+        <a href="/swagger-ui/" class="btn btn-primary" data-magnetic>Open interactive API →</a>
+        <a href="/openapi.json" class="btn btn-ghost">OpenAPI JSON</a>
+        <a href="/irl/health" class="btn btn-ghost">Health</a>
       </div>
     </div>
   </div>
@@ -449,7 +655,12 @@
   <div class="wrap reveal">
     <div class="s-label">Bring your own signal</div>
     <h2>Works on its own. <em>Plugs into yours.</em></h2>
-    <p class="lead">IRL needs nothing else to run: your agents' own mandates are the policy. If you already trust a market-regime or risk signal, IRL can verify its signature and bind every decision to the state of the market it saw, so "the model didn't know" stops being an excuse. MacroPulse's signed regime feed is one example; your volatility model or risk desk plugs in the same way.</p>
+    <p class="lead">Optionally, IRL binds every decision to a signed view of the market, so "the model didn't know the market had turned" stops being an excuse.</p>
+    <div class="prob-grid">
+      <div class="prob"><div class="n">MTA_MODE=none · DEFAULT</div><h3>Mandates only</h3><p>No external signal. Agent mandates are enforced, every decision is sealed and anchored. Nothing else to run.</p></div>
+      <div class="prob"><div class="n">MTA_MODE=external</div><h3>A signed regime feed</h3><p>Point IRL at any Ed25519-signed regime source, such as MacroPulse's daily feed. Each authorization is bound to the regime it saw, and replays are rejected.</p></div>
+      <div class="prob"><div class="n">RUST TRAIT · MtaClient</div><h3>Your own model</h3><p>Implement one trait and pass it at startup. Your model stays private; the audit chain is the same.</p></div>
+    </div>
   </div>
 </section>
 
@@ -457,14 +668,20 @@
 <section id="reg">
   <div class="wrap reveal">
     <div class="s-label">Built for what's coming</div>
-    <h2>Auditability is becoming <em>law.</em></h2>
-    <p class="lead">The direction of travel is one-way: automated decisions must be explainable and provable. IRL maps to the specific requirements each framework asks for — not vague "auditability."</p>
-    <div class="reg-grid stagger">
-      <div class="reg"><div class="name">MiFID II · RTS 6</div><div class="what">Algorithmic trading records &amp; pre-trade controls</div></div>
-      <div class="reg"><div class="name">EU AI Act</div><div class="what">High-risk system logging &amp; traceability</div></div>
-      <div class="reg"><div class="name">SEC 15c3-5</div><div class="what">Pre-trade risk controls on market access</div></div>
-      <div class="reg"><div class="name">FINRA 2026</div><div class="what">Supervision &amp; records for AI agents (Rules 3110 / 3120)</div></div>
+    <h2>Auditability is becoming <em>expected.</em></h2>
+    <p class="lead">Supervisors are already asking how firms oversee autonomous agents. IRL produces the specific evidence each framework talks about.</p>
+    <div class="table-wrap">
+      <table class="gap">
+        <thead><tr><th>Framework</th><th>What it asks for</th><th>What IRL gives you</th></tr></thead>
+        <tbody>
+          <tr><td>MiFID II · RTS 6<br><span class="dim">ESMA briefing, Feb 2026</span></td><td>Pre-trade controls and records for algorithmic trading, explicitly including AI</td><td>Mandate checks before every order; sealed, timestamped records</td></tr>
+          <tr><td>FINRA 2026 report<br><span class="dim">Rules 3110 / 3120</span></td><td>Supervision of AI agents acting beyond the user's intent; tracking agent actions</td><td>Per-agent mandates, suspension, and a record of every action and its reasoning</td></tr>
+          <tr><td>SEC 15c3-5</td><td>Pre-trade risk controls on market access</td><td>Out-of-mandate intents are refused before the exchange</td></tr>
+          <tr><td>EU AI Act · Art. 12</td><td>Automatic event logging for high-risk AI systems</td><td>Tamper-evident event logs, exportable as proof bundles</td></tr>
+        </tbody>
+      </table>
     </div>
+    <p class="note">IRL produces evidence; it doesn't make you compliant on its own. Your obligations depend on who you are and where you operate.</p>
   </div>
 </section>
 
@@ -482,12 +699,11 @@
         <div class="price">$0</div>
         <div class="minq">Free for your own use · FSL</div>
         <ul>
-          <li>Engine: policy, seal, bind, Bitcoin anchoring</li>
-          <li>Agent mandates: caps, assets, venues, suspension</li>
-          <li>MCP gateway for any AI agent</li>
-          <li>Offline verifier, Python &amp; TypeScript SDKs</li>
+          <li>Engine: mandates, seal, bind, Bitcoin anchoring</li>
+          <li>MCP gateway for any AI agent (MIT)</li>
+          <li>Offline verifier, Python &amp; TypeScript SDKs (MIT)</li>
         </ul>
-        <a href="https://github.com/macropulse-lab" class="tcta solid">Get it on GitHub →</a>
+        <a href="https://github.com/macropulse-lab/irl" class="tcta solid">Get it on GitHub →</a>
       </div>
       <div class="tier">
         <span class="badge">Free</span>
@@ -516,32 +732,7 @@
         <a href="https://github.com/macropulse-lab/irl-gateway/issues" class="tcta ghost">Tell us what you need →</a>
       </div>
     </div>
-    <p class="price-note">The engine is free for any use except reselling it as a competing service, and every release becomes Apache 2.0 after two years. Want to host or embed IRL for others? <a href="mailto:hello@macropulse.live?subject=IRL%20commercial%20license">Talk to us</a>.<br>We'd rather have a hundred people using IRL and telling us what's broken than one invoice. <a href="https://github.com/macropulse-lab/irl-gateway/issues">Open an issue →</a></p>
-  </div>
-</section>
-
-<!-- Sandbox -->
-<section id="sandbox">
-  <div class="wrap reveal">
-    <div class="sandbox">
-      <div class="s-label" style="margin-bottom:0.6rem;">For developers</div>
-      <h2>Try it now. <em>No signup.</em></h2>
-      <p class="lead">Three demo agents are pre-seeded. Run a full authorize → bind flow in the interactive API, then verify the proof bundle yourself.</p>
-      <pre><span class="comment"># POST /irl/authorize — seal the reasoning before the order</span>
-{
-  <span class="key">"agent_id"</span>: <span class="str">"00000000-0000-4000-a000-000000000001"</span>,
-  <span class="key">"model_hash_hex"</span>: <span class="str">"sha256-hex-of-model"</span>,
-  <span class="key">"action"</span>: { <span class="key">"Long"</span>: <span class="val">1.5</span> },
-  <span class="key">"asset"</span>: <span class="str">"BTC/USD"</span>,
-  <span class="key">"notional"</span>: <span class="val">64875.00</span>
-}
-<span class="comment"># → { "trace_id": "…", "reasoning_hash": "sha256…", "authorized": true }</span></pre>
-      <div class="sandbox-links">
-        <a href="/swagger-ui/" class="btn btn-primary" data-magnetic>Open interactive API →</a>
-        <a href="/openapi.json" class="btn btn-ghost">OpenAPI JSON</a>
-        <a href="/irl/health" class="btn btn-ghost">Health</a>
-      </div>
-    </div>
+    <p class="price-note">The engine is free for any use except reselling it as a competing service, and every release becomes Apache 2.0 after two years. Want to host or embed IRL for others? <a href="mailto:hello@macropulse.live?subject=IRL%20commercial%20license">Talk to us</a>.<br>We'd rather have a hundred people using IRL and telling us what's broken than one invoice.</p>
   </div>
 </section>
 
@@ -564,11 +755,11 @@
       IRL · Immutable Reasoning Log · FSL-1.1-ALv2
     </div>
     <div class="footer-links">
-      <a href="https://github.com/macropulse-lab">GitHub</a>
+      <a href="https://github.com/macropulse-lab/irl">GitHub</a>
       <a href="https://github.com/macropulse-lab/irl-gateway">Gateway</a>
       <a href="https://github.com/macropulse-lab/irl-public-docs">Docs</a>
       <a href="https://macropulse.live/irl-whitepaper">Whitepaper</a>
-      <a href="https://github.com/macropulse-lab/irl-verify">Verify</a>
+      <a href="https://github.com/macropulse-lab/irl/blob/main/docs/benchmarks/results.md">Benchmarks</a>
       <a href="https://github.com/macropulse-lab/irl-gateway/issues">Feedback</a>
     </div>
   </div>
