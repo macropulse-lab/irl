@@ -14,9 +14,9 @@ services:
     ports:
       # Bind the published port to loopback only: the raw HTTP origin must not be
       # reachable from the public internet on the VPS. The TLS proxy that fronts
-      # irl.macropulse.live reaches it via localhost:4000; other containers reach
+      # norve.dev reaches it via localhost:4000; other containers reach
       # it over the macropulse_default network as irl-engine:4000 (unaffected by
-      # port publishing). VERIFY irl.macropulse.live after deploy.
+      # port publishing). VERIFY norve.dev after deploy.
       - "127.0.0.1:4000:4000"
     environment:
       DATABASE_URL: ${DATABASE_URL}

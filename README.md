@@ -174,7 +174,7 @@ from irl_sdk import IRLClient, AuthorizeRequest, TradeAction, OrderType
 
 async def run():
     async with IRLClient(
-        irl_url="https://irl.macropulse.live",
+        irl_url="https://norve.dev",
         api_token="your-token",
     ) as client:
         result = await client.authorize(AuthorizeRequest(
@@ -217,7 +217,7 @@ npm install irl-sdk
 import { IRLClient } from "irl-sdk";
 
 const client = new IRLClient({
-  irlUrl: "https://irl.macropulse.live",
+  irlUrl: "https://norve.dev",
   apiToken: process.env.IRL_API_TOKEN!,
 });
 
@@ -280,7 +280,7 @@ All endpoints except `/irl/health` require `Authorization: Bearer <token>`.
 | `DELETE` | `/irl/admin/tokens/:id` | Revoke an API token (admin only) |
 | `GET` | `/metrics` | Prometheus metrics endpoint |
 
-Full request and response schemas are available at the sandbox Swagger UI: `https://irl.macropulse.live/swagger-ui/`
+Full request and response schemas are available at the sandbox Swagger UI: `https://norve.dev/swagger-ui/`
 
 ---
 
@@ -321,8 +321,8 @@ IRL is a single Axum 0.7 service backed by PostgreSQL. All components run in-pro
 
 | Resource | URL |
 |---|---|
-| Sandbox | `https://irl.macropulse.live` |
-| Swagger UI | `https://irl.macropulse.live/swagger-ui/` |
+| Sandbox | `https://norve.dev` |
+| Swagger UI | `https://norve.dev/swagger-ui/` |
 | Public documentation | `https://github.com/norve-labs/irl-public-docs` |
 | MCP gateway | `https://github.com/norve-labs/irl-gateway` |
 | Python SDK | `https://github.com/norve-labs/irl-sdk-python` |
