@@ -23,10 +23,20 @@ use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use uuid::Uuid;
+
+/// Identity of an active token, cached for per-request authorization.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TokenInfo {
+    /// `irl.api_tokens.token_id` — what `agent_registry.owner_token_id` references.
+    pub token_id: Uuid,
+    /// True for owner-role (operator) tokens, which bypass tenant scoping.
+    pub is_owner: bool,
+}
 
 pub struct TokenManager {
-    /// SHA-256 hex hashes of active tokens.
-    cache: DashMap<String, ()>,
+    /// SHA-256 hex hash of each active token → its identity.
+    cache: DashMap<String, TokenInfo>,
     /// Per-token debounce for last_used_at updates (avoids per-request writes).
     last_bumped: DashMap<String, Instant>,
     pool: PgPool,
@@ -69,6 +79,12 @@ impl TokenManager {
         self.cache.contains_key(&sha256_hex(raw_token))
     }
 
+    /// Identity of `raw_token` if it is currently active.
+    /// O(1) — reads the in-memory cache only.
+    pub fn lookup(&self, raw_token: &str) -> Option<TokenInfo> {
+        self.cache.get(&sha256_hex(raw_token)).map(|e| *e.value())
+    }
+
     /// Fire-and-forget update to `last_used_at`.
     /// Debounced: at most one DB write per token per 60 s.
     pub fn bump_last_used(self: &Arc<Self>, raw_token: &str) {
@@ -99,15 +115,26 @@ impl TokenManager {
     /// Reload active token hashes from the DB.
     /// Called at startup and by the background refresh task.
     pub async fn refresh_cache(&self) -> Result<(), AppError> {
-        let rows: Vec<(String,)> =
-            sqlx::query_as("SELECT token_hash FROM irl.api_tokens WHERE status = 'active'")
-                .fetch_all(&self.pool)
-                .await?;
+        let rows: Vec<(String, Uuid, String)> = sqlx::query_as(
+            "SELECT token_hash, token_id, role FROM irl.api_tokens WHERE status = 'active'",
+        )
+        .fetch_all(&self.pool)
+        .await?;
 
-        self.cache.clear();
-        for (hash,) in rows {
-            self.cache.insert(hash, ());
+        // Insert/overwrite first, then drop entries no longer active, so a
+        // concurrent request never sees a valid token missing mid-refresh.
+        let active: std::collections::HashSet<String> =
+            rows.iter().map(|(hash, _, _)| hash.clone()).collect();
+        for (hash, token_id, role) in rows {
+            self.cache.insert(
+                hash,
+                TokenInfo {
+                    token_id,
+                    is_owner: role == "owner",
+                },
+            );
         }
+        self.cache.retain(|hash, _| active.contains(hash));
         Ok(())
     }
 

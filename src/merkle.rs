@@ -17,8 +17,9 @@
 //! # OTS receipt lifecycle
 //! OTS calendar receipts are *incomplete* when first issued — they become
 //! complete (Bitcoin-anchored) after 1–2 Bitcoin blocks (~10–20 min).
-//! The raw bytes are stored as-is; upgrading to a complete proof is a
-//! separate out-of-band step using the `ots upgrade` CLI.
+//! The raw bytes are stored as-is in `ots_receipt`. The hourly worker then
+//! fetches each calendar's upgrade and stores the Bitcoin-complete receipt in
+//! `ots_complete_receipt` (see [`crate::ots`]); bundles export it when present.
 //!
 //! # OTS failover
 //! Three calendar servers are tried in order. If the primary is down the
@@ -342,6 +343,143 @@ async fn run_ots_upgrade_cycle(pool: &PgPool) -> Result<(), String> {
     Ok(())
 }
 
+// ── OTS completion cycle ──────────────────────────────────────────────────────
+
+/// Anchors completed per cycle. New anchors come first, so an old receipt
+/// that can never complete does not block fresh ones.
+const COMPLETE_BATCH: i64 = 50;
+/// Calendar upgrade responses are a few kB; refuse anything absurd.
+const MAX_UPGRADE_BYTES: usize = 64 * 1024;
+
+/// Turn pending calendar receipts into Bitcoin-complete ones.
+///
+/// For each anchor with a receipt but no `ots_complete_receipt`, asks the
+/// (allowlisted) calendar behind each pending attestation for its upgrade.
+/// The first upgrade that reaches a Bitcoin block header is spliced in and the
+/// result stored in `ots_complete_receipt`, which the attestation export
+/// already prefers. Receipts whose calendar has not confirmed yet are left
+/// for the next cycle.
+async fn run_ots_completion_cycle(pool: &PgPool) -> Result<(), String> {
+    let rows: Vec<(i64, String, Vec<u8>)> = sqlx::query_as(
+        "SELECT id, merkle_root, ots_receipt \
+         FROM irl.merkle_anchors \
+         WHERE ots_receipt IS NOT NULL \
+           AND ots_complete_receipt IS NULL \
+           AND period_end < now() - interval '1 hour' \
+         ORDER BY period_end DESC \
+         LIMIT $1",
+    )
+    .bind(COMPLETE_BATCH)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| format!("DB error fetching incomplete receipts: {e}"))?;
+
+    if rows.is_empty() {
+        return Ok(());
+    }
+
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(OTS_TIMEOUT_SECS))
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .map_err(|e| format!("failed to build HTTP client: {e}"))?;
+
+    let mut completed = 0usize;
+    for (id, root_hex, receipt) in &rows {
+        match complete_receipt(&client, root_hex, receipt).await {
+            Ok(Some(complete)) => {
+                sqlx::query(
+                    "UPDATE irl.merkle_anchors SET ots_complete_receipt = $1 \
+                     WHERE id = $2 AND ots_complete_receipt IS NULL",
+                )
+                .bind(&complete)
+                .bind(id)
+                .execute(pool)
+                .await
+                .map_err(|e| {
+                    format!("DB error storing complete receipt for anchor id={id}: {e}")
+                })?;
+                completed += 1;
+            }
+            Ok(None) => {
+                tracing::debug!("OTS complete: anchor id={id} not confirmed by its calendar yet")
+            }
+            Err(e) => tracing::warn!("OTS complete: anchor id={id}: {e}"),
+        }
+    }
+    tracing::info!(
+        "OTS complete: {completed}/{} incomplete receipt(s) now reach Bitcoin",
+        rows.len()
+    );
+    Ok(())
+}
+
+/// The complete receipt for one anchor, `None` while no calendar has confirmed.
+async fn complete_receipt(
+    client: &reqwest::Client,
+    root_hex: &str,
+    receipt: &[u8],
+) -> Result<Option<Vec<u8>>, String> {
+    let root = hex::decode(root_hex).map_err(|e| format!("invalid root hex: {e}"))?;
+    let scan = crate::ots::scan(receipt, &root)?;
+    if !scan.bitcoin_heights.is_empty() {
+        // Already complete (e.g. the calendar answered late on the first POST).
+        return Ok(Some(receipt.to_vec()));
+    }
+    for pending in &scan.pending {
+        let Some(url) = crate::ots::upgrade_url(pending) else {
+            tracing::warn!(
+                "OTS complete: calendar {} is not allowlisted; skipped",
+                pending.uri
+            );
+            continue;
+        };
+        let upgrade = match fetch_upgrade(client, &url).await {
+            Ok(Some(upgrade)) => upgrade,
+            Ok(None) => continue,
+            Err(e) => {
+                tracing::warn!("OTS complete: {e}");
+                continue;
+            }
+        };
+        match crate::ots::splice(receipt, &root, pending, &upgrade) {
+            Ok(complete) => return Ok(Some(complete)),
+            Err(e) => tracing::debug!(
+                "OTS complete: upgrade from {} not usable yet: {e}",
+                pending.uri
+            ),
+        }
+    }
+    Ok(None)
+}
+
+/// GET a calendar upgrade. `None` on 404 (not committed yet).
+async fn fetch_upgrade(client: &reqwest::Client, url: &str) -> Result<Option<Vec<u8>>, String> {
+    let resp = client
+        .get(url)
+        .header("Accept", "application/vnd.opentimestamps.v1")
+        .send()
+        .await
+        .map_err(|e| format!("GET {url} failed: {e}"))?;
+    if resp.status() == reqwest::StatusCode::NOT_FOUND {
+        return Ok(None);
+    }
+    if !resp.status().is_success() {
+        return Err(format!("GET {url}: HTTP {}", resp.status()));
+    }
+    let body = resp
+        .bytes()
+        .await
+        .map_err(|e| format!("GET {url}: failed to read body: {e}"))?;
+    if body.len() > MAX_UPGRADE_BYTES {
+        return Err(format!(
+            "GET {url}: {} byte response exceeds limit",
+            body.len()
+        ));
+    }
+    Ok(Some(body.to_vec()))
+}
+
 // ── Background workers ────────────────────────────────────────────────────────
 
 /// Spawn a background task that runs one anchoring cycle every 24 hours.
@@ -366,10 +504,11 @@ pub async fn run_merkle_anchor_worker(pool: PgPool, use_v2: bool) {
     }
 }
 
-/// Spawn a background task that retries failed OTS submissions every hour.
+/// Spawn a background task that maintains OTS receipts every hour.
 ///
-/// Picks up anchors whose original OTS POST failed and re-submits with
-/// failover across all three calendar servers.
+/// Re-submits anchors whose original OTS POST failed (failover across all
+/// three calendar servers), then completes pending receipts with the
+/// calendars' Bitcoin upgrades (see [`crate::ots`]).
 ///
 /// Call from `main.rs` after the DB pool is ready:
 /// ```rust,ignore
@@ -384,6 +523,9 @@ pub async fn run_ots_upgrade_worker(pool: PgPool) {
         interval.tick().await;
         if let Err(e) = run_ots_upgrade_cycle(&pool).await {
             tracing::error!("OTS upgrade cycle failed: {e}");
+        }
+        if let Err(e) = run_ots_completion_cycle(&pool).await {
+            tracing::error!("OTS completion cycle failed: {e}");
         }
     }
 }

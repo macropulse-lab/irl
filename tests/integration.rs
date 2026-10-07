@@ -1440,3 +1440,327 @@ async fn authorize_enforces_agent_venue_and_asset_allowlists() {
         .unwrap();
     assert_eq!(ok.status(), StatusCode::OK);
 }
+
+// ---------------------------------------------------------------------------
+// Tenant isolation: a client token acts only on agents it registered
+// (migration 028, src/tenancy.rs)
+// ---------------------------------------------------------------------------
+
+async fn issue_client_token(app: &axum::Router, name: &str) -> String {
+    let resp = app
+        .clone()
+        .oneshot(json_post(
+            "/irl/admin/tokens",
+            json!({ "client_name": name }),
+            TEST_TOKEN,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    body_json(resp).await["token"].as_str().unwrap().to_string()
+}
+
+async fn register_agent_as(app: &axum::Router, token: &str, name: &str) -> String {
+    let resp = app
+        .clone()
+        .oneshot(json_post(
+            "/irl/agents",
+            json!({ "name": name, "model_hash_hex": MODEL_HASH }),
+            token,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    body_json(resp).await["agent_id"]
+        .as_str()
+        .unwrap()
+        .to_string()
+}
+
+fn authorize_body(agent_id: &str, client_order_id: &str) -> Value {
+    json!({
+        "agent_id": agent_id,
+        "model_hash_hex": MODEL_HASH,
+        "model_id": "tenant-model-v1",
+        "prompt_version": "v1",
+        "feature_schema_id": "schema-v1",
+        "hyperparameter_checksum": "abc123",
+        "action": { "Long": 1.0 },
+        "asset": "BTC-PERP",
+        "order_type": "MARKET",
+        "venue_id": "XNAS",
+        "quantity": 1.0,
+        "notional": 50000.0,
+        "limit_price": null,
+        "client_order_id": client_order_id,
+        "agent_valid_time": now_ms() - 500,
+    })
+}
+
+fn bind_body(trace_id: &str) -> Value {
+    json!({
+        "trace_id": trace_id,
+        "exchange_tx_id": "EX-TENANT-1",
+        "execution_status": "Filled",
+        "asset": "BTC-PERP",
+        "executed_quantity": 1.0,
+        "execution_price": 50000.0,
+    })
+}
+
+async fn status_of(app: &axum::Router, req: Request<Body>) -> StatusCode {
+    app.clone().oneshot(req).await.unwrap().status()
+}
+
+#[tokio::test]
+async fn client_token_cannot_touch_another_clients_agent() {
+    let Some((app, _)) = build_test_app().await else {
+        return;
+    };
+    let alice = issue_client_token(&app, "tenant-alice").await;
+    let mallory = issue_client_token(&app, "tenant-mallory").await;
+    let agent = register_agent_as(&app, &alice, "alice-bot").await;
+
+    // Mallory cannot authorize as Alice's agent, and nothing is sealed.
+    let resp = app
+        .clone()
+        .oneshot(json_post(
+            "/irl/authorize",
+            authorize_body(&agent, "m-1"),
+            &mallory,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    assert_eq!(body_json(resp).await["error"], "AGENT_NOT_FOUND");
+
+    let batch = body_json(
+        app.clone()
+            .oneshot(json_post(
+                "/irl/authorize/batch",
+                json!({ "requests": [authorize_body(&agent, "m-2")] }),
+                &mallory,
+            ))
+            .await
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(batch["results"][0]["error"], "AGENT_NOT_FOUND");
+
+    // Alice can.
+    let resp = app
+        .clone()
+        .oneshot(json_post(
+            "/irl/authorize",
+            authorize_body(&agent, "a-1"),
+            &alice,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let trace_id = body_json(resp).await["trace_id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    // Every agent- or trace-scoped read/write is hidden from Mallory.
+    let hidden = [
+        authed_get(&format!("/irl/trace/{trace_id}"), &mallory),
+        authed_get(&format!("/irl/trace/{trace_id}/chain"), &mallory),
+        authed_get(&format!("/irl/agents/{agent}"), &mallory),
+        authed_get(
+            &format!("/irl/attestation?from=2000-01-01T00:00:00Z&to=2100-01-01T00:00:00Z&agent_id={agent}"),
+            &mallory,
+        ),
+        json_post("/irl/bind-execution", bind_body(&trace_id), &mallory),
+    ];
+    for req in hidden {
+        let uri = req.uri().to_string();
+        assert_eq!(status_of(&app, req).await, StatusCode::NOT_FOUND, "{uri}");
+    }
+    let suspend = Request::builder()
+        .method("PATCH")
+        .uri(format!("/irl/agents/{agent}/status"))
+        .header("Authorization", format!("Bearer {mallory}"))
+        .header("Content-Type", "application/json")
+        .body(Body::from(json!({ "status": "Suspended" }).to_string()))
+        .unwrap();
+    assert_eq!(status_of(&app, suspend).await, StatusCode::NOT_FOUND);
+
+    // Lists are filtered rather than refused.
+    for uri in ["/irl/traces", "/irl/pending"] {
+        let body = body_json(
+            app.clone()
+                .oneshot(authed_get(uri, &mallory))
+                .await
+                .unwrap(),
+        )
+        .await;
+        assert_eq!(body["count"], 0, "{uri} leaked to another tenant");
+        let body = body_json(app.clone().oneshot(authed_get(uri, &alice)).await.unwrap()).await;
+        assert_eq!(body["count"], 1, "{uri} must show the owner its trace");
+    }
+    let bundle = body_json(
+        app.clone()
+            .oneshot(authed_get(
+                "/irl/attestation?from=2000-01-01T00:00:00Z&to=2100-01-01T00:00:00Z",
+                &mallory,
+            ))
+            .await
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(bundle["traces"].as_array().unwrap().len(), 0);
+
+    // The operator (owner token) still sees everything; Alice can bind.
+    assert_eq!(
+        status_of(
+            &app,
+            authed_get(&format!("/irl/trace/{trace_id}"), TEST_TOKEN)
+        )
+        .await,
+        StatusCode::OK
+    );
+    let resp = app
+        .clone()
+        .oneshot(json_post(
+            "/irl/bind-execution",
+            bind_body(&trace_id),
+            &alice,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(body_json(resp).await["verification_status"], "MATCHED");
+}
+
+#[tokio::test]
+async fn client_cannot_chain_onto_another_clients_trace() {
+    let Some((app, _)) = build_test_app().await else {
+        return;
+    };
+    let alice = issue_client_token(&app, "chain-alice").await;
+    let mallory = issue_client_token(&app, "chain-mallory").await;
+    let alice_agent = register_agent_as(&app, &alice, "chain-alice-bot").await;
+    let mallory_agent = register_agent_as(&app, &mallory, "chain-mallory-bot").await;
+
+    let resp = app
+        .clone()
+        .oneshot(json_post(
+            "/irl/authorize",
+            authorize_body(&alice_agent, "ca-1"),
+            &alice,
+        ))
+        .await
+        .unwrap();
+    let alice_trace = body_json(resp).await["trace_id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    let mut body = authorize_body(&mallory_agent, "cm-1");
+    body["parent_trace_id"] = json!(alice_trace);
+    let resp = app
+        .clone()
+        .oneshot(json_post("/irl/authorize", body, &mallory))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    assert_eq!(body_json(resp).await["error"], "TRACE_NOT_FOUND");
+
+    // Chaining onto its own trace still works.
+    let mut body = authorize_body(&alice_agent, "ca-2");
+    body["parent_trace_id"] = json!(alice_trace);
+    let resp = app
+        .clone()
+        .oneshot(json_post("/irl/authorize", body, &alice))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn agents_without_an_owner_are_operator_only() {
+    let Some((app, pool)) = build_test_app().await else {
+        return;
+    };
+    let client = issue_client_token(&app, "tenant-legacy").await;
+    let agent = register_agent_as(&app, TEST_TOKEN, "legacy-bot").await;
+    sqlx::query("UPDATE irl.agent_registry SET owner_token_id = NULL WHERE agent_id = $1::uuid")
+        .bind(&agent)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let resp = app
+        .clone()
+        .oneshot(json_post(
+            "/irl/authorize",
+            authorize_body(&agent, "l-1"),
+            &client,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+    let resp = app
+        .clone()
+        .oneshot(json_post(
+            "/irl/authorize",
+            authorize_body(&agent, "l-2"),
+            TEST_TOKEN,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+}
+
+/// Migration 028 backfills owners of pre-existing agents from AGENT_REGISTER
+/// audit rows. Re-running it is a no-op for agents that already have one.
+#[tokio::test]
+async fn migration_028_backfills_owner_from_audit_log() {
+    let Some((app, pool)) = build_test_app().await else {
+        return;
+    };
+    let client = issue_client_token(&app, "tenant-backfill").await;
+    let agent = register_agent_as(&app, &client, "backfill-bot").await;
+    let owner_before: Option<uuid::Uuid> = sqlx::query_scalar(
+        "SELECT owner_token_id FROM irl.agent_registry WHERE agent_id = $1::uuid",
+    )
+    .bind(&agent)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!(owner_before.is_some(), "registration must record the owner");
+
+    // Simulate an agent registered before 028, then re-apply the migration.
+    sqlx::query("UPDATE irl.agent_registry SET owner_token_id = NULL WHERE agent_id = $1::uuid")
+        .bind(&agent)
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::raw_sql(include_str!("../migrations/028_agent_owner_token.sql"))
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let owner_after: Option<uuid::Uuid> = sqlx::query_scalar(
+        "SELECT owner_token_id FROM irl.agent_registry WHERE agent_id = $1::uuid",
+    )
+    .bind(&agent)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(owner_after, owner_before);
+
+    let resp = app
+        .clone()
+        .oneshot(json_post(
+            "/irl/authorize",
+            authorize_body(&agent, "b-1"),
+            &client,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+}

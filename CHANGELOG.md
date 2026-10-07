@@ -12,7 +12,7 @@ Follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and [Semantic V
   stored but never checked) are now enforced at `/irl/authorize`: an out-of-scope request is rejected
   with 403 `ASSET_UNAUTHORIZED` / `VENUE_UNAUTHORIZED`. Case-insensitive; null = unrestricted.
   Settable at `POST /irl/agents` and in the Python SDK's `register_agent`.
-- **Public source** at [macropulse-lab/irl](https://github.com/macropulse-lab/irl): a history-free
+- **Public source** at [norve-labs/irl](https://github.com/norve-labs/irl): a history-free
   export made by `scripts/publish-public.sh` (private planning, business and operations material
   excluded; gitleaks-gated with `.gitleaks.toml`). Replaces the retired `IRL-engine-AX`.
 - **One IRL site.** irl.macropulse.live leads with the MCP gateway and merges the strongest parts of
@@ -116,6 +116,6 @@ Follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and [Semantic V
 - **Docker Compose** — standalone stack (IRL Engine + PostgreSQL 16)
 - **Database migrations** — 10 SQL migration files under `migrations/`
 
-[1.2.0]: https://github.com/macropulse-lab/irl/releases/tag/v1.2.0
-[1.1.0]: https://github.com/macropulse-lab/irl/releases/tag/v1.1.0
-[1.0.0]: https://github.com/macropulse-lab/irl/releases/tag/v1.0.0
+[1.2.0]: https://github.com/norve-labs/irl/releases/tag/v1.2.0
+[1.1.0]: https://github.com/norve-labs/irl/releases/tag/v1.1.0
+[1.0.0]: https://github.com/norve-labs/irl/releases/tag/v1.0.0

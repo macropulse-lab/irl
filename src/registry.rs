@@ -162,7 +162,13 @@ pub async fn fetch_profile(pool: &PgPool, agent_id: Uuid) -> Result<AgentProfile
 }
 
 /// Register a new agent and return the assigned agent_id.
-pub async fn register_agent(pool: &PgPool, req: &RegisterAgentRequest) -> Result<Uuid, AppError> {
+/// `owner_token_id` is the registering token; client tokens may only act on
+/// agents they own (see `tenancy`).
+pub async fn register_agent(
+    pool: &PgPool,
+    req: &RegisterAgentRequest,
+    owner_token_id: Uuid,
+) -> Result<Uuid, AppError> {
     // None = allow all regime IDs. Use Some(vec![...]) to restrict to specific IDs.
     let allowed_regimes = req.allowed_regimes.clone();
     let max_notional = req.max_notional.unwrap_or(1_000_000.0);
@@ -176,8 +182,9 @@ pub async fn register_agent(pool: &PgPool, req: &RegisterAgentRequest) -> Result
         r#"
         INSERT INTO irl.agent_registry
             (name, model_hash_hex, policy_module_id, allowed_regimes,
-             max_notional, max_leverage, allowed_venues, allowed_assets, allowed_mta_pubkeys)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+             max_notional, max_leverage, allowed_venues, allowed_assets, allowed_mta_pubkeys,
+             owner_token_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING agent_id
         "#,
     )
@@ -190,6 +197,7 @@ pub async fn register_agent(pool: &PgPool, req: &RegisterAgentRequest) -> Result
     .bind(&req.allowed_venues)
     .bind(&req.allowed_assets)
     .bind(&req.allowed_mta_pubkeys)
+    .bind(owner_token_id)
     .fetch_one(pool)
     .await?;
 

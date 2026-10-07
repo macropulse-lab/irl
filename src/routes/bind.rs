@@ -1,9 +1,10 @@
+use crate::auth::Caller;
 use crate::binding::{self, BindExecutionRequest, VerificationStatus};
 use crate::db;
 use crate::errors::AppError;
 use crate::metrics;
 use crate::AppState;
-use axum::{extract::State, Json};
+use axum::{extract::State, Extension, Json};
 
 /// POST /irl/bind-execution
 ///
@@ -22,8 +23,11 @@ use axum::{extract::State, Json};
 /// calls indicate a bug in the agent's exchange integration.
 pub async fn bind_execution(
     State(state): State<AppState>,
+    Extension(caller): Extension<Caller>,
     Json(req): Json<BindExecutionRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    crate::tenancy::ensure_trace(&state.pool, &caller, req.trace_id).await?;
+
     // Fetch authorized intent fields for reconciliation.
     // Also returns current verification_status so we can enforce idempotency.
     let (

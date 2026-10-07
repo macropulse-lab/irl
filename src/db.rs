@@ -427,7 +427,14 @@ pub async fn get_trace_json(
 /// Response structure:
 /// - `ancestry`: chain from root → requested trace (depth=0 is the requested trace)
 /// - `children`: direct sub-agent traces triggered by the requested trace
-pub async fn get_trace_chain(pool: &PgPool, trace_id: Uuid) -> Result<serde_json::Value, AppError> {
+///
+/// `scope` hides nodes whose agent the caller does not own; if that hides
+/// the requested trace itself, the result is TraceNotFound.
+pub async fn get_trace_chain(
+    pool: &PgPool,
+    trace_id: Uuid,
+    scope: Option<Uuid>,
+) -> Result<serde_json::Value, AppError> {
     use chrono::DateTime;
     type AncRow = (
         Uuid,
@@ -458,14 +465,17 @@ pub async fn get_trace_chain(pool: &PgPool, trace_id: Uuid) -> Result<serde_json
         SELECT trace_id, parent_trace_id, reasoning_hash, verification_status,
                txn_time, agent_id, depth
         FROM ancestors
+        WHERE ($2::uuid IS NULL OR agent_id IN
+               (SELECT agent_id FROM irl.agent_registry WHERE owner_token_id = $2))
         ORDER BY depth DESC
         "#,
     )
     .bind(trace_id)
+    .bind(scope)
     .fetch_all(pool)
     .await?;
 
-    if ancestors.is_empty() {
+    if !ancestors.iter().any(|row| row.6 == 0) {
         return Err(AppError::TraceNotFound(trace_id.to_string()));
     }
 
@@ -483,10 +493,13 @@ pub async fn get_trace_chain(pool: &PgPool, trace_id: Uuid) -> Result<serde_json
                txn_time, agent_id
         FROM irl.reasoning_traces
         WHERE parent_trace_id = $1
+          AND ($2::uuid IS NULL OR agent_id IN
+               (SELECT agent_id FROM irl.agent_registry WHERE owner_token_id = $2))
         ORDER BY txn_time ASC
         "#,
     )
     .bind(trace_id)
+    .bind(scope)
     .fetch_all(pool)
     .await?;
 
@@ -598,6 +611,7 @@ pub async fn get_intent_for_binding(
 pub async fn get_pending_traces(
     pool: &PgPool,
     age_seconds: i64,
+    scope: Option<Uuid>,
     key_provider: Option<&dyn crate::kms::KeyProvider>,
 ) -> Result<Vec<serde_json::Value>, AppError> {
     type EncRow = (
@@ -614,11 +628,14 @@ pub async fn get_pending_traces(
         FROM irl.reasoning_traces
         WHERE verification_status = 'PENDING'
           AND txn_time < now() - make_interval(secs => $1)
+          AND ($2::uuid IS NULL OR agent_id IN
+               (SELECT agent_id FROM irl.agent_registry WHERE owner_token_id = $2))
         ORDER BY txn_time ASC
         LIMIT 1000
         "#,
     )
     .bind(age_seconds as f64)
+    .bind(scope)
     .fetch_all(pool)
     .await?;
 
@@ -632,6 +649,7 @@ pub async fn get_pending_traces(
 /// Decrypts encrypted rows (encryption_version=1) transparently.
 pub async fn get_shadow_violations(
     pool: &PgPool,
+    scope: Option<Uuid>,
     key_provider: Option<&dyn crate::kms::KeyProvider>,
 ) -> Result<Vec<serde_json::Value>, AppError> {
     type EncRow = (
@@ -647,10 +665,13 @@ pub async fn get_shadow_violations(
         SELECT trace_id, trace_json, trace_nonce, encrypted_dek, key_version, encryption_version
         FROM irl.reasoning_traces
         WHERE policy_result = 'SHADOW_HALTED'
+          AND ($1::uuid IS NULL OR agent_id IN
+               (SELECT agent_id FROM irl.agent_registry WHERE owner_token_id = $1))
         ORDER BY txn_time DESC
         LIMIT 500
         "#,
     )
+    .bind(scope)
     .fetch_all(pool)
     .await?;
 
@@ -662,6 +683,7 @@ pub async fn get_shadow_violations(
 /// Decrypts encrypted rows (encryption_version=1) transparently.
 pub async fn get_orphan_traces(
     pool: &PgPool,
+    scope: Option<Uuid>,
     key_provider: Option<&dyn crate::kms::KeyProvider>,
 ) -> Result<Vec<serde_json::Value>, AppError> {
     type EncRow = (
@@ -677,10 +699,13 @@ pub async fn get_orphan_traces(
         SELECT trace_id, trace_json, trace_nonce, encrypted_dek, key_version, encryption_version
         FROM irl.reasoning_traces
         WHERE verification_status IN ('EXPIRED', 'DIVERGENT')
+          AND ($1::uuid IS NULL OR agent_id IN
+               (SELECT agent_id FROM irl.agent_registry WHERE owner_token_id = $1))
         ORDER BY txn_time DESC
         LIMIT 200
         "#,
     )
+    .bind(scope)
     .fetch_all(pool)
     .await?;
 
@@ -779,6 +804,7 @@ pub async fn list_traces(
     to_ms: Option<i64>,
     status: Option<String>,
     limit: i64,
+    scope: Option<Uuid>,
 ) -> Result<Vec<serde_json::Value>, AppError> {
     use chrono::{TimeZone, Utc};
 
@@ -813,6 +839,8 @@ pub async fn list_traces(
           AND ($2::timestamptz IS NULL OR txn_time            >= $2)
           AND ($3::timestamptz IS NULL OR txn_time            <= $3)
           AND ($4::text        IS NULL OR verification_status  = $4)
+          AND ($6::uuid IS NULL OR agent_id IN
+               (SELECT agent_id FROM irl.agent_registry WHERE owner_token_id = $6))
         ORDER BY txn_time DESC
         LIMIT $5
         "#,
@@ -822,6 +850,7 @@ pub async fn list_traces(
     .bind(to_ts)
     .bind(status)
     .bind(limit)
+    .bind(scope)
     .fetch_all(pool)
     .await?;
 

@@ -1,3 +1,4 @@
+use crate::auth::Caller;
 use crate::db;
 use crate::errors::AppError;
 use crate::heartbeat::SignedHeartbeat;
@@ -27,11 +28,12 @@ use uuid::Uuid;
 /// The HALTED trace is still persisted — the audit log must record all attempts.
 pub async fn authorize(
     State(state): State<AppState>,
+    Extension(caller): Extension<Caller>,
     cert_ext: Option<Extension<ClientCertInfo>>,
     Json(req): Json<AuthorizeRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let cert_info = cert_ext.map(|e| e.0);
-    authorize_one(&state, cert_info.as_ref(), req)
+    authorize_one(&state, &caller, cert_info.as_ref(), req)
         .await
         .map(Json)
 }
@@ -39,11 +41,21 @@ pub async fn authorize(
 /// Core authorization logic called by both the single and batch endpoints.
 pub async fn authorize_one(
     state: &AppState,
+    caller: &Caller,
     cert_info: Option<&ClientCertInfo>,
     req: AuthorizeRequest,
 ) -> Result<serde_json::Value, AppError> {
     let start = std::time::Instant::now();
     let cfg = &state.config;
+
+    // Tenant isolation: a client token may only authorize its own agents.
+    // Checked before anything is sealed, so no trace is written for others.
+    crate::tenancy::ensure_agent(&state.pool, caller, req.agent_id).await?;
+    // ...and may only chain onto its own traces, so it cannot graft itself
+    // into another tenant's lineage.
+    if let Some(parent) = req.parent_trace_id {
+        crate::tenancy::ensure_trace(&state.pool, caller, parent).await?;
+    }
 
     // --- MTLS-02: Client Cert CN Validation ---
     // If a client cert was presented (mTLS active), CN must match the agent_id.

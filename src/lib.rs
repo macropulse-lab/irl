@@ -20,6 +20,7 @@ pub mod metrics;
 pub mod middleware;
 pub mod mta;
 pub mod openapi;
+pub mod ots;
 pub mod policy;
 pub mod rate_limit;
 pub mod registry;
@@ -28,6 +29,7 @@ pub mod seal;
 pub mod seal_v2;
 pub mod shadow_mode;
 pub mod snapshot;
+pub mod tenancy;
 pub mod time;
 pub mod tls;
 pub mod token_manager;
@@ -149,7 +151,6 @@ pub fn build_router(state: AppState) -> Router {
         ));
 
     let public = Router::new()
-        .route("/", get(routes::landing))
         .route("/irl/health", get(routes::health))
         .route("/irl/anchors", get(routes::attestation::list_anchors))
         .route("/metrics", get(routes::metrics_handler));

@@ -1,6 +1,6 @@
 use crate::errors::AppError;
 use crate::rate_limit::RateLimiter;
-use crate::token_manager::{sha256_hex, TokenManager};
+use crate::token_manager::{sha256_hex, TokenInfo, TokenManager};
 use axum::{
     extract::{Request, State},
     middleware::Next,
@@ -32,6 +32,23 @@ pub fn build_auth_state(
 #[derive(Clone, Debug)]
 pub struct OperatorId(pub String);
 
+/// The authenticated token behind the request — the tenant boundary.
+/// Inserted as an Axum extension by require_bearer after successful auth.
+/// Client tokens may only act on agents they registered; owner tokens on all.
+#[derive(Clone, Copy, Debug)]
+pub struct Caller(pub TokenInfo);
+
+impl Caller {
+    /// `None` for owner tokens (unscoped), else the token every query is scoped to.
+    pub fn scope(&self) -> Option<uuid::Uuid> {
+        if self.0.is_owner {
+            None
+        } else {
+            Some(self.0.token_id)
+        }
+    }
+}
+
 /// Client IP address extracted from ConnectInfo<SocketAddr>.
 /// Inserted as an Axum extension by require_bearer after successful auth.
 #[derive(Clone, Debug)]
@@ -46,22 +63,24 @@ pub struct ClientIp(pub Option<std::net::IpAddr>);
 /// After successful validation, updates `last_used_at` in a fire-and-forget
 /// background task (debounced to at most once per minute per token).
 ///
-/// Inserts `OperatorId` and `ClientIp` as Axum extensions for downstream handlers.
+/// Inserts `OperatorId`, `Caller` and `ClientIp` as Axum extensions for downstream handlers.
 pub async fn require_bearer(
     State(auth): State<AuthState>,
     mut req: Request,
     next: Next,
 ) -> Result<Response, AppError> {
     let token = extract_bearer(req.headers())?.to_owned();
-    if !auth.token_manager.is_valid(&token) {
-        return Err(AppError::Unauthorized);
-    }
+    let info = auth
+        .token_manager
+        .lookup(&token)
+        .ok_or(AppError::Unauthorized)?;
     auth.rate_limiter.check(&token)?;
     auth.token_manager.bump_last_used(&token);
 
     // Derive OperatorId: first 12 hex chars of the SHA-256 of the raw token.
     let token_hash_prefix = sha256_hex(&token).chars().take(12).collect::<String>();
     req.extensions_mut().insert(OperatorId(token_hash_prefix));
+    req.extensions_mut().insert(Caller(info));
 
     // Extract client IP from ConnectInfo extension (inserted by into_make_service_with_connect_info).
     let client_ip: Option<std::net::IpAddr> = req

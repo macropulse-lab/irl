@@ -1,9 +1,10 @@
+use crate::auth::Caller;
 use crate::db;
 use crate::errors::AppError;
 use crate::AppState;
 use axum::{
     extract::{Path, State},
-    Json,
+    Extension, Json,
 };
 use uuid::Uuid;
 
@@ -30,8 +31,10 @@ use uuid::Uuid;
 /// returns the full orchestrator lineage and all sub-agents dispatched from it.
 pub async fn get_trace_chain(
     State(state): State<AppState>,
+    Extension(caller): Extension<Caller>,
     Path(trace_id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let chain = db::get_trace_chain(&state.pool, trace_id).await?;
+    // Client tokens see only nodes of their own agents.
+    let chain = db::get_trace_chain(&state.pool, trace_id, caller.scope()).await?;
     Ok(Json(chain))
 }

@@ -136,11 +136,14 @@ pub struct BundleAnchor {
 // ── Bundle construction ───────────────────────────────────────────────────────
 
 /// Build a proof bundle for `(from, to]`, optionally filtered to one agent.
+/// `scope` (a client token) limits traces to agents that token owns; anchors
+/// stay complete, since their leaves are hashes only.
 pub async fn build_bundle(
     pool: &PgPool,
     from: DateTime<Utc>,
     to: DateTime<Utc>,
     agent_id: Option<Uuid>,
+    scope: Option<Uuid>,
 ) -> Result<ProofBundle, AppError> {
     if from >= to {
         return Err(AppError::BadRequest(
@@ -148,7 +151,7 @@ pub async fn build_bundle(
         ));
     }
 
-    let traces = fetch_traces(pool, from, to, agent_id).await?;
+    let traces = fetch_traces(pool, from, to, agent_id, scope).await?;
     if traces.len() as i64 >= MAX_BUNDLE_TRACES {
         return Err(AppError::BadRequest(format!(
             "bundle would exceed {MAX_BUNDLE_TRACES} traces; narrow the time range"
@@ -202,6 +205,7 @@ async fn fetch_traces(
     from: DateTime<Utc>,
     to: DateTime<Utc>,
     agent_id: Option<Uuid>,
+    scope: Option<Uuid>,
 ) -> Result<Vec<BundleTrace>, AppError> {
     let rows: Vec<TraceRow> = sqlx::query_as(
         r#"
@@ -215,6 +219,8 @@ async fn fetch_traces(
         FROM irl.reasoning_traces
         WHERE txn_time > $1 AND txn_time <= $2
           AND ($3::uuid IS NULL OR agent_id = $3)
+          AND ($5::uuid IS NULL OR agent_id IN
+               (SELECT agent_id FROM irl.agent_registry WHERE owner_token_id = $5))
         ORDER BY txn_time ASC
         LIMIT $4
         "#,
@@ -223,6 +229,7 @@ async fn fetch_traces(
     .bind(to)
     .bind(agent_id)
     .bind(MAX_BUNDLE_TRACES)
+    .bind(scope)
     .fetch_all(pool)
     .await?;
 

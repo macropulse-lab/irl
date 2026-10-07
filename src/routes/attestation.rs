@@ -1,9 +1,10 @@
 use crate::attestation::{self, ProofBundle};
+use crate::auth::Caller;
 use crate::errors::AppError;
 use crate::AppState;
 use axum::{
     extract::{Query, State},
-    Json,
+    Extension, Json,
 };
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
@@ -88,9 +89,13 @@ pub async fn list_anchors(
 /// Requires: Authorization: Bearer <token>
 pub async fn get_attestation(
     State(state): State<AppState>,
+    Extension(caller): Extension<Caller>,
     Query(q): Query<AttestationQuery>,
 ) -> Result<Json<ProofBundle>, AppError> {
     let pool = state.readonly_pool.as_ref().unwrap_or(&state.pool);
-    let bundle = attestation::build_bundle(pool, q.from, q.to, q.agent_id).await?;
+    if let Some(agent_id) = q.agent_id {
+        crate::tenancy::ensure_agent(&state.pool, &caller, agent_id).await?;
+    }
+    let bundle = attestation::build_bundle(pool, q.from, q.to, q.agent_id, caller.scope()).await?;
     Ok(Json(bundle))
 }

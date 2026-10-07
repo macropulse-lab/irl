@@ -17,6 +17,7 @@
 //! }
 //! ```
 
+use crate::auth::Caller;
 use crate::errors::AppError;
 use crate::middleware::client_cert::ClientCertInfo;
 use crate::snapshot::AuthorizeRequest;
@@ -34,6 +35,7 @@ pub struct BatchAuthorizeRequest {
 /// POST /irl/authorize/batch
 pub async fn batch_authorize(
     State(state): State<AppState>,
+    Extension(caller): Extension<Caller>,
     cert_ext: Option<Extension<ClientCertInfo>>,
     Json(batch): Json<BatchAuthorizeRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
@@ -53,13 +55,14 @@ pub async fn batch_authorize(
     let mut results = Vec::with_capacity(batch.requests.len());
 
     for req in batch.requests {
-        let outcome = match super::authorize::authorize_one(&state, cert_info.as_ref(), req).await {
-            Ok(v) => v,
-            Err(e) => serde_json::json!({
-                "error": e.error_code(),
-                "message": e.to_string(),
-            }),
-        };
+        let outcome =
+            match super::authorize::authorize_one(&state, &caller, cert_info.as_ref(), req).await {
+                Ok(v) => v,
+                Err(e) => serde_json::json!({
+                    "error": e.error_code(),
+                    "message": e.to_string(),
+                }),
+            };
         results.push(outcome);
     }
 

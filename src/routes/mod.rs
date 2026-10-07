@@ -8,35 +8,20 @@ pub mod chain;
 pub mod tokens;
 pub mod traces;
 
+use crate::auth::Caller;
 use crate::db;
 use crate::errors::AppError;
 use crate::metrics;
+use crate::tenancy;
 use crate::AppState;
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
-    response::{Html, IntoResponse},
-    Json,
+    response::IntoResponse,
+    Extension, Json,
 };
 use serde::Deserialize;
 use uuid::Uuid;
-
-/// GET /
-///
-/// HTML landing page for the public instance. Operators can serve their own
-/// page by pointing IRL_LANDING_PATH at a file; otherwise the embedded one.
-pub async fn landing() -> impl IntoResponse {
-    let path = std::env::var("IRL_LANDING_PATH")
-        .unwrap_or_else(|_| "/app/static/landing.html".to_string());
-    match std::fs::read_to_string(&path) {
-        Ok(html) => Html(html).into_response(),
-        Err(_) => Html(LANDING_HTML).into_response(),
-    }
-}
-
-/// Single source: src/routes/landing.html (inside src/ so the deploy build
-/// context, which ships only src/, migrations/ and Cargo files, includes it).
-const LANDING_HTML: &str = include_str!("landing.html");
 
 /// GET /irl/trace/:trace_id
 ///
@@ -45,9 +30,11 @@ const LANDING_HTML: &str = include_str!("landing.html");
 /// Decrypts encrypted rows (encryption_version=1) transparently.
 pub async fn get_trace(
     State(state): State<AppState>,
+    Extension(caller): Extension<Caller>,
     Path(trace_id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let pool = state.readonly_pool.as_ref().unwrap_or(&state.pool);
+    tenancy::ensure_trace(&state.pool, &caller, trace_id).await?;
     let trace = db::get_trace_json(pool, trace_id, state.key_provider.as_deref()).await?;
     Ok(Json(trace))
 }
@@ -86,11 +73,13 @@ pub async fn regime(State(state): State<AppState>) -> Result<Json<serde_json::Va
 
 pub async fn get_pending(
     State(state): State<AppState>,
+    Extension(caller): Extension<Caller>,
     Query(q): Query<PendingQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let age = q.age_seconds.unwrap_or(0);
     let pool = state.readonly_pool.as_ref().unwrap_or(&state.pool);
-    let traces = db::get_pending_traces(pool, age, state.key_provider.as_deref()).await?;
+    let traces =
+        db::get_pending_traces(pool, age, caller.scope(), state.key_provider.as_deref()).await?;
     Ok(Json(
         serde_json::json!({ "count": traces.len(), "traces": traces }),
     ))
@@ -103,9 +92,10 @@ pub async fn get_pending(
 /// Decrypts encrypted rows (encryption_version=1) transparently.
 pub async fn get_orphans(
     State(state): State<AppState>,
+    Extension(caller): Extension<Caller>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let pool = state.readonly_pool.as_ref().unwrap_or(&state.pool);
-    let traces = db::get_orphan_traces(pool, state.key_provider.as_deref()).await?;
+    let traces = db::get_orphan_traces(pool, caller.scope(), state.key_provider.as_deref()).await?;
     Ok(Json(
         serde_json::json!({ "count": traces.len(), "traces": traces }),
     ))
@@ -119,9 +109,11 @@ pub async fn get_orphans(
 /// Decrypts encrypted rows (encryption_version=1) transparently.
 pub async fn get_shadow_violations(
     State(state): State<AppState>,
+    Extension(caller): Extension<Caller>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let pool = state.readonly_pool.as_ref().unwrap_or(&state.pool);
-    let traces = db::get_shadow_violations(pool, state.key_provider.as_deref()).await?;
+    let traces =
+        db::get_shadow_violations(pool, caller.scope(), state.key_provider.as_deref()).await?;
     Ok(Json(
         serde_json::json!({ "count": traces.len(), "traces": traces }),
     ))

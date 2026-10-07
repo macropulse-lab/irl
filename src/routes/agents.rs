@@ -5,7 +5,7 @@
 /// GET    /irl/agents/:id              — Get agent profile
 /// PATCH  /irl/agents/:id/status       — Suspend / deregister an agent
 use crate::audit::{self, AuditAction};
-use crate::auth::{ClientIp, OperatorId};
+use crate::auth::{Caller, ClientIp, OperatorId};
 use crate::errors::AppError;
 use crate::registry::{self, RegisterAgentRequest, UpdateStatusRequest};
 use crate::AppState;
@@ -19,6 +19,7 @@ use uuid::Uuid;
 
 pub async fn register_agent(
     State(state): State<AppState>,
+    Extension(caller): Extension<Caller>,
     Extension(operator): Extension<OperatorId>,
     Extension(client_ip): Extension<ClientIp>,
     Json(req): Json<RegisterAgentRequest>,
@@ -30,7 +31,8 @@ pub async fn register_agent(
         ));
     }
 
-    let agent_id = registry::register_agent(&state.pool, &req).await?;
+    // The registering token owns the agent (tenant isolation, migration 028).
+    let agent_id = registry::register_agent(&state.pool, &req, caller.0.token_id).await?;
 
     // Write audit row after successful registration.
     audit::insert_audit_log(
@@ -67,8 +69,10 @@ pub async fn list_agents(
 
 pub async fn get_agent(
     State(state): State<AppState>,
+    Extension(caller): Extension<Caller>,
     Path(agent_id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    crate::tenancy::ensure_agent(&state.pool, &caller, agent_id).await?;
     let profile = registry::fetch_profile(&state.pool, agent_id).await?;
     let value =
         serde_json::to_value(profile).map_err(|e| AppError::Serialization(e.to_string()))?;
@@ -77,6 +81,7 @@ pub async fn get_agent(
 
 pub async fn update_agent_status(
     State(state): State<AppState>,
+    Extension(caller): Extension<Caller>,
     Extension(operator): Extension<OperatorId>,
     Extension(client_ip): Extension<ClientIp>,
     Path(agent_id): Path<Uuid>,
@@ -89,6 +94,7 @@ pub async fn update_agent_status(
             valid.join(", ")
         )));
     }
+    crate::tenancy::ensure_agent(&state.pool, &caller, agent_id).await?;
     let old_status = registry::update_status(&state.pool, agent_id, &req.status).await?;
 
     // Determine the specific audit action based on new status.

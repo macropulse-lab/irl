@@ -69,14 +69,14 @@ IRL is free to use, self-host and modify, and its source is open to read. Every 
 
 | Component | What it is |
 |---|---|
-| [IRL Engine](https://github.com/macropulse-lab/irl) (this repo) | The server: policy, seal, bind, anchor |
-| [irl-gateway](https://github.com/macropulse-lab/irl-gateway) | MCP server that puts any AI agent's trades through IRL |
-| [irl-verify](https://github.com/macropulse-lab/irl-verify) | Offline proof-bundle verifier |
-| [irl-sdk-python](https://github.com/macropulse-lab/irl-sdk-python), [irl-sdk-ts](https://github.com/macropulse-lab/irl-sdk-ts) | Client SDKs |
+| [IRL Engine](https://github.com/norve-labs/irl) (this repo) | The server: policy, seal, bind, anchor |
+| [irl-gateway](https://github.com/norve-labs/irl-gateway) | MCP server that puts any AI agent's trades through IRL |
+| [irl-verify](https://github.com/norve-labs/irl-verify) | Offline proof-bundle verifier |
+| [irl-sdk-python](https://github.com/norve-labs/irl-sdk-python), [irl-sdk-ts](https://github.com/norve-labs/irl-sdk-ts) | Client SDKs |
 
 The engine is licensed under the [Functional Source License](LICENSE.md) (FSL-1.1-ALv2): any use is permitted, including commercial use inside your own firm, except offering IRL to others as a competing product or service. Every release automatically becomes Apache 2.0 two years after it is published. The gateway, SDKs and verifier are MIT.
 
-A hosted offering for teams may come later, shaped by what early users need. Tell us in the [gateway issues](https://github.com/macropulse-lab/irl-gateway/issues).
+A hosted offering for teams may come later, shaped by what early users need. Tell us in the [gateway issues](https://github.com/norve-labs/irl-gateway/issues).
 
 Roadmap: TEE execution attestation, Wasm policy modules, ZK compliance proofs.
 
@@ -107,7 +107,7 @@ In `external` mode with `LAYER2_ENABLED=true`, each authorize call must include 
 The standalone compose file bundles PostgreSQL and a mock MTA. No MacroPulse account or external service is required.
 
 ```bash
-git clone https://github.com/macropulse-lab/irl.git
+git clone https://github.com/norve-labs/irl.git
 cd irl-engine
 
 docker compose -f docker-compose.standalone.yml up -d
@@ -323,10 +323,10 @@ IRL is a single Axum 0.7 service backed by PostgreSQL. All components run in-pro
 |---|---|
 | Sandbox | `https://irl.macropulse.live` |
 | Swagger UI | `https://irl.macropulse.live/swagger-ui/` |
-| Public documentation | `https://github.com/macropulse-lab/irl-public-docs` |
-| MCP gateway | `https://github.com/macropulse-lab/irl-gateway` |
-| Python SDK | `https://github.com/macropulse-lab/irl-sdk-python` |
-| TypeScript SDK | `https://github.com/macropulse-lab/irl-sdk-ts` |
+| Public documentation | `https://github.com/norve-labs/irl-public-docs` |
+| MCP gateway | `https://github.com/norve-labs/irl-gateway` |
+| Python SDK | `https://github.com/norve-labs/irl-sdk-python` |
+| TypeScript SDK | `https://github.com/norve-labs/irl-sdk-ts` |
 | Example regime source (MacroPulse) | `https://macropulse.live` |
 
 ---
@@ -337,4 +337,4 @@ Functional Source License 1.1, Apache 2.0 future license (FSL-1.1-ALv2). See [`L
 
 In short, you may use, copy, modify and redistribute IRL for any purpose except a Competing Use, meaning offering it, or something substantially similar, to others as a commercial product or service. Each version becomes available under Apache 2.0 on the second anniversary of its release. To resell, embed or host IRL for others, ask for a commercial license.
 
-Questions, ideas and bug reports: [open an issue](https://github.com/macropulse-lab/irl-gateway/issues) or write to hello@macropulse.live.
+Questions, ideas and bug reports: [open an issue](https://github.com/norve-labs/irl-gateway/issues) or write to hello@macropulse.live.
