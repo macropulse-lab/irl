@@ -5,6 +5,7 @@ pub mod authorize;
 pub mod batch;
 pub mod bind;
 pub mod chain;
+pub mod signup;
 pub mod tokens;
 pub mod traces;
 

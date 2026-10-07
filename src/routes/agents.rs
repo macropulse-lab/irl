@@ -31,8 +31,30 @@ pub async fn register_agent(
         ));
     }
 
+    let mut tx = state.pool.begin().await?;
+    // Self-serve (paper-tier) tokens own a limited number of agents. The
+    // per-token lock makes count-then-insert safe against parallel requests.
+    if caller.0.paper_only {
+        let max = crate::routes::signup::SignupPolicy::from_env().max_agents;
+        sqlx::query("SELECT pg_advisory_xact_lock(hashtext($1))")
+            .bind(format!("irl-agents:{}", caller.0.token_id))
+            .execute(&mut *tx)
+            .await?;
+        let (owned,): (i64,) =
+            sqlx::query_as("SELECT count(*) FROM irl.agent_registry WHERE owner_token_id = $1")
+                .bind(caller.0.token_id)
+                .fetch_one(&mut *tx)
+                .await?;
+        if owned >= max {
+            return Err(AppError::QuotaExceeded(format!(
+                "a paper-tier token can register at most {max} agents"
+            )));
+        }
+    }
+
     // The registering token owns the agent (tenant isolation, migration 028).
-    let agent_id = registry::register_agent(&state.pool, &req, caller.0.token_id).await?;
+    let agent_id = registry::register_agent(&mut *tx, &req, caller.0.token_id).await?;
+    tx.commit().await?;
 
     // Write audit row after successful registration.
     audit::insert_audit_log(
@@ -95,6 +117,11 @@ pub async fn update_agent_status(
         )));
     }
     crate::tenancy::ensure_agent(&state.pool, &caller, agent_id).await?;
+    // Clients may suspend or retire their own agents (a kill switch), but only
+    // the operator can bring one back: an operator's suspension must stick.
+    if !caller.0.is_owner && req.status == "Active" {
+        return Err(AppError::Forbidden);
+    }
     let old_status = registry::update_status(&state.pool, agent_id, &req.status).await?;
 
     // Determine the specific audit action based on new status.

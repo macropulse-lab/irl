@@ -52,6 +52,14 @@ pub enum AppError {
 
     #[error("Intent already authorized for this agent and client_order_id (trace {0})")]
     DuplicateIntent(String),
+
+    /// A self-serve limit was reached (signups per IP or per day, agents per
+    /// paper-tier token). The message says which.
+    #[error("{0}")]
+    QuotaExceeded(String),
+
+    #[error("Self-serve signup is disabled on this server")]
+    SignupDisabled,
 }
 
 #[derive(Debug, Error, PartialEq)]
@@ -109,6 +117,8 @@ pub enum PolicyError {
     VenueUnauthorized { venue: String },
     #[error("Asset '{asset}' is not in the agent's allowed_assets")]
     AssetUnauthorized { asset: String },
+    #[error("This is a paper-tier token: venue '{venue}' is not a paper venue (venue_id must start with 'paper'). Ask the operator for a full token to trade live.")]
+    PaperTierOnly { venue: String },
 }
 
 impl AppError {
@@ -139,6 +149,7 @@ impl AppError {
             }
             AppError::Policy(PolicyError::VenueUnauthorized { .. }) => "VENUE_UNAUTHORIZED",
             AppError::Policy(PolicyError::AssetUnauthorized { .. }) => "ASSET_UNAUTHORIZED",
+            AppError::Policy(PolicyError::PaperTierOnly { .. }) => "PAPER_TIER_ONLY",
             AppError::Database(_) => "DATABASE_ERROR",
             AppError::Serialization(_) => "SERIALIZATION_ERROR",
             AppError::TraceNotFound(_) => "TRACE_NOT_FOUND",
@@ -150,6 +161,8 @@ impl AppError {
             AppError::BadRequest(_) => "BAD_REQUEST",
             AppError::Heartbeat(HeartbeatError::RegimeRefStale { .. }) => "REGIME_REF_STALE",
             AppError::DuplicateIntent(_) => "DUPLICATE_INTENT",
+            AppError::QuotaExceeded(_) => "QUOTA_EXCEEDED",
+            AppError::SignupDisabled => "SIGNUP_DISABLED",
         }
     }
 }
@@ -245,6 +258,9 @@ impl IntoResponse for AppError {
                 "ASSET_UNAUTHORIZED",
                 self.to_string(),
             ),
+            AppError::Policy(PolicyError::PaperTierOnly { .. }) => {
+                (StatusCode::FORBIDDEN, "PAPER_TIER_ONLY", self.to_string())
+            }
             AppError::Database(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "DATABASE_ERROR",
@@ -294,6 +310,12 @@ impl IntoResponse for AppError {
             }
             AppError::DuplicateIntent(_) => {
                 (StatusCode::CONFLICT, "DUPLICATE_INTENT", self.to_string())
+            }
+            AppError::QuotaExceeded(msg) => {
+                (StatusCode::TOO_MANY_REQUESTS, "QUOTA_EXCEEDED", msg.clone())
+            }
+            AppError::SignupDisabled => {
+                (StatusCode::NOT_FOUND, "SIGNUP_DISABLED", self.to_string())
             }
         };
 

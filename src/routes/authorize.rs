@@ -38,6 +38,60 @@ pub async fn authorize(
         .map(Json)
 }
 
+/// Longest identity field a paper-tier token may send.
+const PAPER_MAX_FIELD: usize = 256;
+
+async fn check_paper_tier(
+    state: &AppState,
+    caller: &Caller,
+    req: &AuthorizeRequest,
+) -> Result<(), AppError> {
+    if !req
+        .venue_id
+        .trim()
+        .to_ascii_lowercase()
+        .starts_with("paper")
+    {
+        return Err(AppError::Policy(
+            crate::errors::PolicyError::PaperTierOnly {
+                venue: req.venue_id.clone(),
+            },
+        ));
+    }
+    let fields = [
+        ("model_id", &req.model_id),
+        ("prompt_version", &req.prompt_version),
+        ("feature_schema_id", &req.feature_schema_id),
+        ("hyperparameter_checksum", &req.hyperparameter_checksum),
+        ("asset", &req.asset),
+        ("venue_id", &req.venue_id),
+        ("client_order_id", &req.client_order_id),
+        ("notional_currency", &req.notional_currency),
+    ];
+    if let Some((name, _)) = fields.iter().find(|(_, v)| v.len() > PAPER_MAX_FIELD) {
+        return Err(AppError::BadRequest(format!(
+            "{name} is limited to {PAPER_MAX_FIELD} bytes for paper-tier tokens"
+        )));
+    }
+    let max = crate::routes::signup::SignupPolicy::from_env().max_traces_per_day;
+    let (today,): (i64,) = sqlx::query_as(
+        r#"
+        SELECT count(*) FROM irl.reasoning_traces
+        WHERE txn_time > now() - interval '24 hours'
+          AND agent_id IN (SELECT agent_id FROM irl.agent_registry WHERE owner_token_id = $1)
+        "#,
+    )
+    .bind(caller.0.token_id)
+    .fetch_one(&state.pool)
+    .await?;
+    if today >= max {
+        return Err(AppError::QuotaExceeded(format!(
+            "a paper-tier token can authorize at most {max} intents per 24 hours"
+        )));
+    }
+    Ok(())
+}
+
 /// Core authorization logic called by both the single and batch endpoints.
 pub async fn authorize_one(
     state: &AppState,
@@ -55,6 +109,11 @@ pub async fn authorize_one(
     // into another tenant's lineage.
     if let Some(parent) = req.parent_trace_id {
         crate::tenancy::ensure_trace(&state.pool, caller, parent).await?;
+    }
+    // Self-serve (paper-tier) tokens trade on paper venues only, with short
+    // identity fields and a daily cap, so a free token can't fill the store.
+    if caller.0.paper_only {
+        check_paper_tier(state, caller, &req).await?;
     }
 
     // --- MTLS-02: Client Cert CN Validation ---

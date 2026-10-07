@@ -1764,3 +1764,246 @@ async fn migration_028_backfills_owner_from_audit_log() {
         .unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 }
+
+// ---------------------------------------------------------------------------
+// Self-serve signup (POST /irl/signup, migration 029)
+// ---------------------------------------------------------------------------
+
+fn signup_req(ip: &str, body: Value) -> Request<Body> {
+    Request::builder()
+        .method("POST")
+        .uri("/irl/signup")
+        .header("Content-Type", "application/json")
+        .header("X-Real-IP", ip)
+        // Arrive the way production does: through the edge, a private peer.
+        .extension(axum::extract::ConnectInfo(std::net::SocketAddr::from((
+            [172, 18, 0, 2],
+            40000,
+        ))))
+        .body(Body::from(body.to_string()))
+        .unwrap()
+}
+
+fn clear_signup_env() {
+    for k in [
+        "SIGNUP_ENABLED",
+        "SIGNUP_PER_IP_PER_DAY",
+        "SIGNUP_DAILY_CAP",
+        "SIGNUP_MAX_AGENTS",
+        "SIGNUP_MAX_TRACES_PER_DAY",
+    ] {
+        std::env::remove_var(k);
+    }
+}
+
+#[tokio::test]
+async fn signup_is_off_unless_enabled() {
+    let Some((app, _)) = build_test_app().await else {
+        return;
+    };
+    clear_signup_env();
+    let resp = app
+        .oneshot(signup_req("198.51.100.1", json!({})))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    assert_eq!(body_json(resp).await["error"], "SIGNUP_DISABLED");
+}
+
+#[tokio::test]
+async fn signup_token_is_paper_only_and_agent_capped() {
+    let Some((app, pool)) = build_test_app().await else {
+        return;
+    };
+    clear_signup_env();
+    std::env::set_var("SIGNUP_ENABLED", "true");
+    std::env::set_var("SIGNUP_MAX_AGENTS", "2");
+
+    let resp = app
+        .clone()
+        .oneshot(signup_req(
+            "198.51.100.20",
+            json!({ "client_name": "self-serve-bot", "contact": "me@example.com" }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let body = body_json(resp).await;
+    assert_eq!(body["tier"], "paper");
+    let token = body["token"].as_str().unwrap().to_string();
+
+    // Stored as paper tier, with the IP hashed, never raw.
+    let (tier, contact, ip_hash): (String, Option<String>, Option<String>) = sqlx::query_as(
+        "SELECT tier, contact, signup_ip_hash FROM irl.api_tokens WHERE source = 'signup'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(tier, "paper");
+    assert_eq!(contact.as_deref(), Some("me@example.com"));
+    let ip_hash = ip_hash.unwrap();
+    assert_eq!(ip_hash.len(), 64);
+    assert!(!ip_hash.contains("198.51"));
+
+    let agent = register_agent_as(&app, &token, "self-serve-agent").await;
+
+    let mut paper = authorize_body(&agent, "ss-1");
+    paper["venue_id"] = json!("paper-binance");
+    let resp = app
+        .clone()
+        .oneshot(json_post("/irl/authorize", paper, &token))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK, "paper venue must be allowed");
+
+    let mut live = authorize_body(&agent, "ss-2");
+    live["venue_id"] = json!("binance");
+    let resp = app
+        .clone()
+        .oneshot(json_post("/irl/authorize", live, &token))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    assert_eq!(body_json(resp).await["error"], "PAPER_TIER_ONLY");
+
+    // Cap of 2 agents: the second registers, the third is refused.
+    register_agent_as(&app, &token, "self-serve-agent-2").await;
+    let resp = app
+        .clone()
+        .oneshot(json_post(
+            "/irl/agents",
+            json!({ "name": "one-too-many", "model_hash_hex": MODEL_HASH }),
+            &token,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::TOO_MANY_REQUESTS);
+    assert_eq!(body_json(resp).await["error"], "QUOTA_EXCEEDED");
+
+    // The operator's own (full) token is unaffected by paper rules.
+    let op_agent = register_agent_as(&app, TEST_TOKEN, "operator-agent").await;
+    let mut live = authorize_body(&op_agent, "op-1");
+    live["venue_id"] = json!("binance");
+    let resp = app
+        .oneshot(json_post("/irl/authorize", live, TEST_TOKEN))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    clear_signup_env();
+}
+
+#[tokio::test]
+async fn signup_enforces_per_ip_and_daily_caps() {
+    let Some((app, _)) = build_test_app().await else {
+        return;
+    };
+    clear_signup_env();
+    std::env::set_var("SIGNUP_ENABLED", "true");
+    std::env::set_var("SIGNUP_PER_IP_PER_DAY", "2");
+    std::env::set_var("SIGNUP_DAILY_CAP", "3");
+
+    let status = |ip: &'static str| {
+        let app = app.clone();
+        async move {
+            app.oneshot(signup_req(ip, json!({})))
+                .await
+                .unwrap()
+                .status()
+        }
+    };
+    assert_eq!(status("198.51.100.30").await, StatusCode::CREATED);
+    assert_eq!(status("198.51.100.30").await, StatusCode::CREATED);
+    assert_eq!(
+        status("198.51.100.30").await,
+        StatusCode::TOO_MANY_REQUESTS,
+        "per-IP cap"
+    );
+    assert_eq!(status("198.51.100.31").await, StatusCode::CREATED);
+    assert_eq!(
+        status("198.51.100.32").await,
+        StatusCode::TOO_MANY_REQUESTS,
+        "daily cap"
+    );
+    clear_signup_env();
+}
+
+#[tokio::test]
+async fn paper_token_cannot_reactivate_and_is_capped_per_day() {
+    let Some((app, _)) = build_test_app().await else {
+        return;
+    };
+    clear_signup_env();
+    std::env::set_var("SIGNUP_ENABLED", "true");
+    std::env::set_var("SIGNUP_MAX_TRACES_PER_DAY", "2");
+    let resp = app
+        .clone()
+        .oneshot(signup_req("198.51.100.40", json!({})))
+        .await
+        .unwrap();
+    let token = body_json(resp).await["token"].as_str().unwrap().to_string();
+    let agent = register_agent_as(&app, &token, "capped-agent").await;
+
+    let patch = |status: &str, tok: &str| {
+        Request::builder()
+            .method("PATCH")
+            .uri(format!("/irl/agents/{agent}/status"))
+            .header("Authorization", format!("Bearer {tok}"))
+            .header("Content-Type", "application/json")
+            .body(Body::from(json!({ "status": status }).to_string()))
+            .unwrap()
+    };
+    assert_eq!(
+        status_of(&app, patch("Suspended", &token)).await,
+        StatusCode::OK,
+        "own kill switch"
+    );
+    assert_eq!(
+        status_of(&app, patch("Active", &token)).await,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        status_of(&app, patch("Active", TEST_TOKEN)).await,
+        StatusCode::OK,
+        "operator can"
+    );
+
+    let auth = |n: u32| {
+        let mut b = authorize_body(&agent, &format!("cap-{n}"));
+        b["venue_id"] = json!("paper-binance");
+        json_post("/irl/authorize", b, &token)
+    };
+    assert_eq!(status_of(&app, auth(1)).await, StatusCode::OK);
+    assert_eq!(status_of(&app, auth(2)).await, StatusCode::OK);
+    let resp = app.clone().oneshot(auth(3)).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::TOO_MANY_REQUESTS);
+    assert_eq!(body_json(resp).await["error"], "QUOTA_EXCEEDED");
+
+    std::env::set_var("SIGNUP_MAX_TRACES_PER_DAY", "100");
+    let mut long = authorize_body(&agent, "long-1");
+    long["venue_id"] = json!("paper-binance");
+    long["model_id"] = json!("m".repeat(300));
+    let resp = app
+        .oneshot(json_post("/irl/authorize", long, &token))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    clear_signup_env();
+}
+
+#[tokio::test]
+async fn signup_rejects_formula_like_contact() {
+    let Some((app, _)) = build_test_app().await else {
+        return;
+    };
+    clear_signup_env();
+    std::env::set_var("SIGNUP_ENABLED", "true");
+    let resp = app
+        .oneshot(signup_req(
+            "198.51.100.50",
+            json!({ "contact": "=HYPERLINK(\"x\")" }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    clear_signup_env();
+}

@@ -100,6 +100,21 @@ In `external` mode with `LAYER2_ENABLED=true`, each authorize call must include 
 
 ---
 
+## Get a free token (hosted at norve.dev)
+
+```bash
+uvx irl-gateway init            # signup + agent registration + MCP config, in one step
+# or by hand:
+curl -X POST https://norve.dev/irl/signup -H "Content-Type: application/json"   -d '{"client_name": "my-agent", "contact": "optional@example.com"}'
+```
+
+Self-serve tokens are **paper tier**: they authorize only on paper venues
+(`venue_id` starting with `paper`), own up to 3 agents and up to 500
+authorizations a day. Ask the operator for a full token to trade live.
+Every token sees only the agents it registered.
+
+---
+
 ## Quick Start
 
 ### Docker Standalone (no external dependencies)
@@ -156,6 +171,9 @@ PostgreSQL 14+ is required. Run `sqlx migrate run` against the target database b
 | `METRICS_TOKEN` | no | — | Bearer token required for `/metrics` scrape (open when unset) |
 | `EXPOSE_DOCS` | no | `false` | Serve Swagger UI at `/swagger-ui` and the OpenAPI schema at `/openapi.json`. Off by default so the API surface is not published on untrusted deployments; enable on sandboxes and local dev |
 | `MERKLE_V2_ENABLED` | no | `false` | Anchor period roots with RFC-6962 domain-separated hashing (leaf `0x00` / node `0x01`). Enabling this closes the second-preimage weakness in the legacy `SHA256(l‖r)` construction |
+| `SIGNUP_ENABLED` | no | `false` | Serve `POST /irl/signup` (self-serve paper-tier tokens). Off by default so a self-hosted engine never exposes it by surprise |
+| `SIGNUP_PER_IP_PER_DAY` / `SIGNUP_DAILY_CAP` | no | `3` / `100` | Signups per requester IP (IPv6: per /64) and in total, per rolling 24 h |
+| `SIGNUP_MAX_AGENTS` / `SIGNUP_MAX_TRACES_PER_DAY` | no | `3` / `500` | Agents and authorizations per paper-tier token (per rolling 24 h) |
 | `SNAPSHOT_V2_ENABLED` | no | `false` | Seal traces with the split public/private commitment format. Leave OFF until a staging round-trip verification has been run — enabling it changes sealed-hash inputs |
 
 ---
@@ -253,11 +271,13 @@ await client.close();
 
 ## API Reference
 
-All endpoints except `/irl/health` require `Authorization: Bearer <token>`.
+All endpoints except `/irl/health`, `/irl/anchors` and `/irl/signup` require `Authorization: Bearer <token>`.
 
 | Method | Route | Description |
 |---|---|---|
 | `GET` | `/irl/health` | Liveness check |
+| `POST` | `/irl/signup` | Self-serve paper-tier token (when `SIGNUP_ENABLED=true`) |
+| `GET` | `/irl/anchors` | Public Merkle anchor feed |
 | `POST` | `/irl/agents` | Register an agent (model hash, notional cap, regime permissions) |
 | `GET` | `/irl/agents` | List all registered agents (admin only) |
 | `GET` | `/irl/agents/:id` | Retrieve agent profile |

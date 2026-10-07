@@ -153,6 +153,7 @@ pub fn build_router(state: AppState) -> Router {
     let public = Router::new()
         .route("/irl/health", get(routes::health))
         .route("/irl/anchors", get(routes::attestation::list_anchors))
+        .route("/irl/signup", post(routes::signup::signup))
         .route("/metrics", get(routes::metrics_handler));
 
     // OpenAPI spec + Swagger UI publish the full API catalog with NO auth. Gate

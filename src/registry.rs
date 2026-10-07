@@ -164,8 +164,8 @@ pub async fn fetch_profile(pool: &PgPool, agent_id: Uuid) -> Result<AgentProfile
 /// Register a new agent and return the assigned agent_id.
 /// `owner_token_id` is the registering token; client tokens may only act on
 /// agents they own (see `tenancy`).
-pub async fn register_agent(
-    pool: &PgPool,
+pub async fn register_agent<'e>(
+    pool: impl sqlx::PgExecutor<'e>,
     req: &RegisterAgentRequest,
     owner_token_id: Uuid,
 ) -> Result<Uuid, AppError> {

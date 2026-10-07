@@ -8,7 +8,6 @@
 //! accepts text literals for INET columns via implicit cast.
 
 use crate::errors::AppError;
-use sqlx::PgPool;
 
 /// All operator actions that must appear in the audit log.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -61,8 +60,8 @@ impl AuditAction {
 /// - `details_json` — optional structured payload (old/new values, reason, etc.)
 /// - `ip_address` — source IP of the operator request; bound as text so
 ///   PostgreSQL's implicit text→INET cast handles the column type
-pub async fn insert_audit_log(
-    pool: &PgPool,
+pub async fn insert_audit_log<'e>(
+    pool: impl sqlx::PgExecutor<'e>,
     operator_id: &str,
     action: AuditAction,
     target_id: Option<&str>,

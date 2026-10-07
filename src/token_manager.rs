@@ -32,6 +32,9 @@ pub struct TokenInfo {
     pub token_id: Uuid,
     /// True for owner-role (operator) tokens, which bypass tenant scoping.
     pub is_owner: bool,
+    /// True for self-serve signup tokens (tier 'paper', migration 029): they
+    /// may only authorize on paper venues and own a limited number of agents.
+    pub paper_only: bool,
 }
 
 pub struct TokenManager {
@@ -79,6 +82,12 @@ impl TokenManager {
         self.cache.contains_key(&sha256_hex(raw_token))
     }
 
+    /// Add one newly issued token to the cache (by its SHA-256 hash), so it
+    /// works immediately without reloading every token.
+    pub fn insert_active(&self, token_hash: &str, info: TokenInfo) {
+        self.cache.insert(token_hash.to_string(), info);
+    }
+
     /// Identity of `raw_token` if it is currently active.
     /// O(1) — reads the in-memory cache only.
     pub fn lookup(&self, raw_token: &str) -> Option<TokenInfo> {
@@ -115,8 +124,8 @@ impl TokenManager {
     /// Reload active token hashes from the DB.
     /// Called at startup and by the background refresh task.
     pub async fn refresh_cache(&self) -> Result<(), AppError> {
-        let rows: Vec<(String, Uuid, String)> = sqlx::query_as(
-            "SELECT token_hash, token_id, role FROM irl.api_tokens WHERE status = 'active'",
+        let rows: Vec<(String, Uuid, String, String)> = sqlx::query_as(
+            "SELECT token_hash, token_id, role, tier FROM irl.api_tokens WHERE status = 'active'",
         )
         .fetch_all(&self.pool)
         .await?;
@@ -124,13 +133,14 @@ impl TokenManager {
         // Insert/overwrite first, then drop entries no longer active, so a
         // concurrent request never sees a valid token missing mid-refresh.
         let active: std::collections::HashSet<String> =
-            rows.iter().map(|(hash, _, _)| hash.clone()).collect();
-        for (hash, token_id, role) in rows {
+            rows.iter().map(|(hash, _, _, _)| hash.clone()).collect();
+        for (hash, token_id, role, tier) in rows {
             self.cache.insert(
                 hash,
                 TokenInfo {
                     token_id,
                     is_owner: role == "owner",
+                    paper_only: tier == "paper",
                 },
             );
         }
